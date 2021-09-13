@@ -1,4 +1,14 @@
+from os import defpath
 
+
+# For Debugging
+DEBUG=True
+def log(s):
+    if DEBUG:
+        print(s)
+
+def log_separator():
+    log('*'*80)
 
 def sample_topic_assignment(topic_assignment,
                             topic_counts,
@@ -31,4 +41,11 @@ def sample_topic_assignment(topic_assignment,
         doc_counts: updated doc_counts array
         topic_N: updated count of words assigned to each topic
     """
-    #TODO
+    # TODO
+    log_separator()
+    log("Topic Assignment:")
+    log(topic_assignment)
+    log_separator()
+    log("Topic Counts:")
+    log(topic_counts)
+    log_separator()

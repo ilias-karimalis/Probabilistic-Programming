@@ -64,7 +64,7 @@ topic_N = topic_counts.sum(axis=1)
 # times your sampler will iterate.
 alpha = None
 gamma = None 
-iters = None 
+iters = 10
 
 
 jll = []
