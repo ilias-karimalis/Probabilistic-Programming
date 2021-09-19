@@ -48,7 +48,7 @@ def sample_topic_assignment(topic_assignment,
     (n_topics, alphabet_size) = topic_counts.shape
     (n_docs,_) = doc_counts.shape
 
-    for i in tqdm(range(n)):
+    for i in range(n):
         word = words[i]
         topic = topic_assignment[i]
         document = document_assignment[i]

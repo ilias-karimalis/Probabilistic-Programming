@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 
 from joint_log_lik import joint_log_lik
 from sample_topic_assignment import sample_topic_assignment
+from tqdm.auto import tqdm
 
 
 bagofwords = loadmat('bagofwords_nips.mat')
@@ -21,16 +22,6 @@ def log(s):
 
 def log_separator():
     log('*'*80)
-
-# Exploratory Work
-log_separator()
-log("WS")
-log(WS)
-log_separator()
-log("WO[0] = {}".format(WO[0]))
-
-log_separator()
-
 
 # This script outlines how you might create a MCMC sampler for the LDA model
 
@@ -82,11 +73,11 @@ topic_N = topic_counts.sum(axis=1)
 # times your sampler will iterate.
 alpha = np.ones(n_topics) #* 0.1
 gamma = np.ones(alphabet_size) #* 0.001
-iters = 10
+iters = 100
 
 
 jll = []
-for i in range(iters):
+for i in tqdm(range(iters)):
     jll.append(joint_log_lik(doc_counts,topic_counts,alpha,gamma))
     
     prm = np.random.permutation(words.shape[0])
