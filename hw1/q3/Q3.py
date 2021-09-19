@@ -1,5 +1,5 @@
 import numpy as np
-import random
+from tqdm.auto import tqdm
 
 # Q3
 
@@ -72,20 +72,20 @@ print('There is a {:.2f}% chance it is cloudy given the grass is wet'.format(pro
 
 # 2. ancestral sampling and rejection:
 def sample_C():
-    u = random.random()
+    u = np.random.random()
     return TRUE if u <= p_C(TRUE) else FALSE
 
 
 def sample_R_given_C(c):
     if c not in SAMPLE_SPACE:
         raise Exception("Invalid C value")
-    u = random.random()
+    u = np.random.random()
     return TRUE if u <= p_R_given_C(TRUE, c) else FALSE
 
 def sample_S_given_C(c):
     if c not in SAMPLE_SPACE:
         raise Exception("Invalid C value")
-    u = random.random()
+    u = np.random.random()
     return TRUE if u <= p_S_given_C(TRUE, c) else FALSE
 
 def sample_W_given_R_S(r,s):
@@ -94,7 +94,7 @@ def sample_W_given_R_S(r,s):
     if s not in SAMPLE_SPACE:
         raise Exception("Invalid S value")
 
-    u = random.random()
+    u = np.random.random()
     return TRUE if u <= p_W_given_S_R(TRUE, s, r) else FALSE
 
 def ancestral_sample_C_S_R_W():
@@ -105,7 +105,7 @@ def ancestral_sample_C_S_R_W():
     return (c,s,r,w)
 
 
-num_samples = 10000
+num_samples = 10000000
 samples = np.zeros(num_samples)
 rejections = 0
 i = 0
@@ -147,29 +147,29 @@ for c in range(2):
 p_C_given_S_R = p_C_S_R[:, :, :] / p_C_S_R[:, :, :].sum(axis=(0), keepdims=True)
 
 # gibbs sampling
-num_samples = 10000
+num_samples = 100000000
 samples = np.zeros(num_samples)
 state = np.zeros(4, dtype='int')
 # c,s,r,w, set w = True
-(c,s,r,w) = (0,0,0,1)
-for i in range(num_samples):
+(c,s,r,w) = (1,1,1,1)
+for i in tqdm(range(num_samples)):
     log("*"*20)
     log("Iteration {}:".format(i+1))
 
-    # sample C given S,R (Conditionally independent of W)
-    u1 = random.random()
-    c = TRUE if u1 <= p_C_given_S_R[s,r,TRUE] else FALSE
-    log("Value of C: {}".format(c))
-
     # sample S given C,R,W
-    u2 = random.random()
-    s = TRUE if u2 <= p_S_given_C_R_W[c,r,w,TRUE] else FALSE
+    u2 = np.random.random()
+    s = TRUE if u2 <= p_S_given_C_R_W[c,TRUE,r,w] else FALSE
     log("Value of S: {}".format(s))
 
     # sample R given C,S,W
-    u3 = random.random()
-    r = TRUE if u3 <= p_R_given_C_S_W[c,s,w,TRUE] else FALSE
+    u3 = np.random.random()
+    r = TRUE if u3 <= p_R_given_C_S_W[c,s,TRUE,w] else FALSE
     log("Value of R: {}".format(r))
+
+    # sample C given S,R (Conditionally independent of W)
+    u1 = np.random.random()
+    c = TRUE if u1 <= p_C_given_S_R[TRUE,s,r] else FALSE
+    log("Value of C: {}".format(c))
 
     # add new C value to samples
     samples[i] = c

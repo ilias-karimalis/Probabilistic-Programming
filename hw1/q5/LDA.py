@@ -13,6 +13,24 @@ DS = bagofwords['DS'][0] - 1
 WO = loadmat('words_nips.mat')['WO'][:,0]
 titles = loadmat('titles_nips.mat')['titles'][:,0]
 
+# For Debugging
+DEBUG=True
+def log(s):
+    if DEBUG:
+        print(s)
+
+def log_separator():
+    log('*'*80)
+
+# Exploratory Work
+log_separator()
+log("WS")
+log(WS)
+log_separator()
+log("WO[0] = {}".format(WO[0]))
+
+log_separator()
+
 
 # This script outlines how you might create a MCMC sampler for the LDA model
 
@@ -62,8 +80,8 @@ topic_N = topic_counts.sum(axis=1)
 # These parameters are both scalars and really we use alpha * ones() to
 # parameterize each dirichlet distribution. Iters will set the number of
 # times your sampler will iterate.
-alpha = None
-gamma = None 
+alpha = np.ones(n_topics) #* 0.1
+gamma = np.ones(alphabet_size) #* 0.001
 iters = 10
 
 
@@ -91,6 +109,9 @@ for i in range(iters):
 jll.append(joint_log_lik(doc_counts,topic_counts,alpha,gamma))
 
 plt.plot(jll)
+plt.savefig("fig.png")
+
+
 
 
 # find the 10 most probable words of the 20 topics:
