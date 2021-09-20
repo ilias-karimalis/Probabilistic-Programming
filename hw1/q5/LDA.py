@@ -32,8 +32,8 @@ words = WS
 
 # subset data, EDIT THIS PART ONCE YOU ARE CONFIDENT THE MODEL IS WORKING
 # PROPERLY IN ORDER TO USE THE ENTIRE DATA SET
-words = words[document_assignment < 100]
-document_assignment  = document_assignment[document_assignment < 100]
+#words = words[document_assignment < 100]
+#document_assignment  = document_assignment[document_assignment < 100]
 
 n_docs = document_assignment.max() + 1
 
@@ -71,9 +71,9 @@ topic_N = topic_counts.sum(axis=1)
 # These parameters are both scalars and really we use alpha * ones() to
 # parameterize each dirichlet distribution. Iters will set the number of
 # times your sampler will iterate.
-alpha = np.ones(n_topics) #* 0.1
-gamma = np.ones(alphabet_size) #* 0.001
-iters = 100
+alpha = np.ones(n_topics) * 0.1
+gamma = np.ones(alphabet_size) * 0.001
+iters = 150
 
 
 jll = []
@@ -100,7 +100,7 @@ for i in tqdm(range(iters)):
 jll.append(joint_log_lik(doc_counts,topic_counts,alpha,gamma))
 
 plt.plot(jll)
-plt.savefig("fig.png")
+plt.savefig("jll.png")
 
 
 
