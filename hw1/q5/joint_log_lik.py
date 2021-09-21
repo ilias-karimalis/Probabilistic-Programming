@@ -1,7 +1,12 @@
 import numpy as np
 import scipy.special as sc
 
-def joint_log_lik(doc_counts, topic_counts, alpha, gamma):
+def initialize_logBeta(alpha, gamma):
+    logBeta_alpha = - np.sum(sc.gammaln(alpha)) - sc.gammaln(np.sum(alpha))
+    logBeta_gamma = - np.sum(sc.gammaln(gamma)) - sc.gammaln(np.sum(gamma))
+    return logBeta_alpha, logBeta_gamma
+
+def joint_log_lik(doc_counts, topic_counts, alpha, gamma, logBeta_alpha, logBeta_gamma):
     """
     Calculate the joint log likelihood of the model
     
@@ -13,15 +18,10 @@ def joint_log_lik(doc_counts, topic_counts, alpha, gamma):
     Returns:
         jll: the joint log likelihood of the model
     """
-    #TODO
     (n_docs, n_topics) = doc_counts.shape
-    (_, alphabet_size) = topic_counts.shape
 
-    logBeta_alpha = - sum(sc.gammaln(alpha)) - sc.gammaln(sum(alpha))
-    logBeta_gamma = - sum(sc.gammaln(gamma)) - sc.gammaln(sum(gamma))
-
-    x = sum([sum(sc.gammaln(doc_counts[d, :] + alpha)) - sc.gammaln(sum(doc_counts[d, :] + alpha)) for d in range(n_docs)])
-    y = sum([sum(sc.gammaln(topic_counts[k,:] + gamma)) - sc.gammaln(sum(topic_counts[k,:] + gamma)) for k in range(n_topics)])
+    x = np.sum([np.sum(sc.gammaln(doc_counts[d, :] + alpha)) - sc.gammaln(np.sum(doc_counts[d, :] + alpha)) for d in range(n_docs)])
+    y = np.sum([np.sum(sc.gammaln(topic_counts[k,:] + gamma)) - sc.gammaln(np.sum(topic_counts[k,:] + gamma)) for k in range(n_topics)])
     
 
     return logBeta_alpha * n_docs + logBeta_gamma * n_topics + x + y

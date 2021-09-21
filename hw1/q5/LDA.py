@@ -1,10 +1,15 @@
+from numpy.core.defchararray import join
 from scipy.io import loadmat
 import numpy as np
 import matplotlib.pyplot as plt
 
-from joint_log_lik import joint_log_lik
+from joint_log_lik import initialize_logBeta, joint_log_lik
 from sample_topic_assignment import sample_topic_assignment
 from tqdm.auto import tqdm
+from datetime import datetime
+
+
+import timeit
 
 
 bagofwords = loadmat('bagofwords_nips.mat')
@@ -73,12 +78,13 @@ topic_N = topic_counts.sum(axis=1)
 # times your sampler will iterate.
 alpha = np.ones(n_topics) * 0.1
 gamma = np.ones(alphabet_size) * 0.001
-iters = 150
+iters = 10
 
+logBeta_alpha, logBeta_gamma = initialize_logBeta(alpha, gamma)
 
 jll = []
 for i in tqdm(range(iters)):
-    jll.append(joint_log_lik(doc_counts,topic_counts,alpha,gamma))
+    jll.append(joint_log_lik(doc_counts,topic_counts,alpha,gamma,logBeta_alpha,logBeta_gamma))
     
     prm = np.random.permutation(words.shape[0])
     
@@ -96,18 +102,21 @@ for i in tqdm(range(iters)):
                                 gamma,
                                 words,
                                 document_assignment)
-                        
-jll.append(joint_log_lik(doc_counts,topic_counts,alpha,gamma))
+
+jll.append(joint_log_lik(doc_counts,topic_counts,alpha,gamma,logBeta_alpha, logBeta_gamma))
 
 plt.plot(jll)
-plt.savefig("jll.png")
-
-
-
+plt.savefig(datetime.today().strftime('%Y-%m-%d-%H:%M:%S') + ".png")
 
 # find the 10 most probable words of the 20 topics:
 # TODO:
 fstr = ''
+for topic in range(20):
+    words = np.argpartition(topic_counts[topic,:], -5)[-5:]
+    fstr += "Topic {}:\n".format(topic)
+    for word in words:
+        fstr += WO[word]
+        fstr += "\n"
 
 with open('most_probable_words_per_topic','w') as f:
     f.write(fstr)
