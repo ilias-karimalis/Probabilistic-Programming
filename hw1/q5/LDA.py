@@ -78,7 +78,7 @@ topic_N = topic_counts.sum(axis=1)
 # times your sampler will iterate.
 alpha = np.ones(n_topics) * 0.1
 gamma = np.ones(alphabet_size) * 0.001
-iters = 10
+iters = 150
 
 logBeta_alpha, logBeta_gamma = initialize_logBeta(alpha, gamma)
 
@@ -106,16 +106,15 @@ for i in tqdm(range(iters)):
 jll.append(joint_log_lik(doc_counts,topic_counts,alpha,gamma,logBeta_alpha, logBeta_gamma))
 
 plt.plot(jll)
-plt.savefig(datetime.today().strftime('%Y-%m-%d-%H:%M:%S') + ".png")
+plt.savefig("results/" + datetime.today().strftime('%Y-%m-%d-%H:%M:%S') + ".png")
 
 # find the 10 most probable words of the 20 topics:
-# TODO:
 fstr = ''
-for topic in range(20):
-    words = np.argpartition(topic_counts[topic,:], -5)[-5:]
+for topic in range(n_topics):
+    words = np.argsort(topic_counts[topic,:])[-10:]
     fstr += "Topic {}:\n".format(topic)
     for word in words:
-        fstr += WO[word]
+        fstr += WO[word][0]
         fstr += "\n"
 
 with open('most_probable_words_per_topic','w') as f:
@@ -124,13 +123,13 @@ with open('most_probable_words_per_topic','w') as f:
 
 # most similar documents to document 0 by cosine similarity over topic distribution:
 # normalize topics per document and dot product:
-# TODO:
-    
-fstr = ''
+csarray = [doc_counts[0].dot(doc_counts[doc])/(np.linalg.norm(doc_counts[0])*np.linalg.norm(doc_counts[doc])) for doc in range(n_docs)]
+top_docs = np.argsort(csarray)[-11:]
+fstr = "Top Cosine Similarities with Document 0\n"
+for doc in reversed(top_docs):
+    #print(doc_counts[doc,:].dot(doc_counts[doc,:]))
+    fstr += "Document {}, Title: {}\n".format(doc, titles[doc])
+    fstr += str(doc_counts[0].dot(doc_counts[doc])/(np.linalg.norm(doc_counts[0])*np.linalg.norm(doc_counts[doc]))) + "\n"
 
 with open('most_similar_titles_to_0','w') as f:
     f.write(fstr)
-
-    
-
-
