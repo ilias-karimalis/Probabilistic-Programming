@@ -1,4 +1,15 @@
+from os import defpath
+import numpy as np
+#from tqdm.auto import tqdm
 
+# For Debugging
+DEBUG=True
+def log(s):
+    if DEBUG:
+        print(s)
+
+def log_separator():
+    log('*'*80)
 
 def sample_topic_assignment(topic_assignment,
                             topic_counts,
@@ -23,7 +34,7 @@ def sample_topic_assignment(topic_assignment,
         alpha: prior dirichlet parameter on document specific distributions over topics
         gamma: prior dirichlet parameter on topic specific distribuitons over words.
 
-        words: size n array of wors
+        words: size n array of words
         document_assignment: size n array of assignments of words to documents
     Returns:
         topic_assignment: updated topic_assignment array
@@ -31,4 +42,29 @@ def sample_topic_assignment(topic_assignment,
         doc_counts: updated doc_counts array
         topic_N: updated count of words assigned to each topic
     """
-    #TODO
+    (n,) = topic_assignment.shape
+    (_, alphabet_size) = topic_counts.shape
+
+    alphabet_size_times_gamma = alphabet_size*gamma
+
+    for i in range(n):
+        word = words[i]
+        topic = topic_assignment[i]
+        document = document_assignment[i]
+
+        # We must lower the topic values for this topic because We are conditioning on all topics but it,
+        doc_counts[document, topic] -= 1
+        topic_counts[topic, word] -= 1
+        topic_N[topic] -= 1
+
+        p_z = (doc_counts[document,:] + alpha) * (topic_counts[:, word] + gamma) / (topic_N + alphabet_size_times_gamma)
+        p_z = p_z / np.sum(p_z)
+        sample = np.argmax(np.random.multinomial(1, p_z))
+
+        topic_assignment[i] = sample
+
+        doc_counts[document, sample] += 1
+        topic_counts[sample, word] += 1
+        topic_N[sample] += 1
+
+    return topic_assignment, topic_counts, doc_counts, topic_N

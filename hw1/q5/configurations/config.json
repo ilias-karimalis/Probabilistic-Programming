@@ -1,0 +1,7 @@
+{
+    "num_iterations": 150,
+    "num_topics": 20,
+    "alpha": 0.1,
+    "gamma": 0.001,
+    "mini_run": true
+}
