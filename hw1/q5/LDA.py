@@ -32,17 +32,30 @@ alphabet_size = WO.size
 document_assignment = DS
 words = WS
 
+# ***************************
+# Initialize Hyperparameters:
+# ***************************
+# Wether to train on all or part of the data
+mini_run = True
+# number of topics
+n_topics = 20
+# prior parameters, alpha parameterizes the dirichlet to regularize the
+# document specific distributions over topics and gamma parameterizes the
+# dirichlet to regularize the topic specific distributions over words.
+# These parameters are both scalars and really we use alpha * ones() to
+# parameterize each dirichlet distribution. Iters will set the number of
+# times your sampler will iterate.
+alpha = np.ones(n_topics) * 0.1
+gamma = 0.001
+iters = 10
+
 # subset data, EDIT THIS PART ONCE YOU ARE CONFIDENT THE MODEL IS WORKING
 # PROPERLY IN ORDER TO USE THE ENTIRE DATA SET
-mini_run = True
 if mini_run:
     words = words[document_assignment < 100]
     document_assignment  = document_assignment[document_assignment < 100]
 
 n_docs = document_assignment.max() + 1
-
-# number of topics
-n_topics = 20
 
 # initial topic assigments
 topic_assignment = np.random.randint(n_topics, size=document_assignment.size)
@@ -69,15 +82,6 @@ for k in range(n_topics):
 # topic_N: array of size n_topics count of total words assigned to each topic
 topic_N = topic_counts.sum(axis=1)
 
-# prior parameters, alpha parameterizes the dirichlet to regularize the
-# document specific distributions over topics and gamma parameterizes the
-# dirichlet to regularize the topic specific distributions over words.
-# These parameters are both scalars and really we use alpha * ones() to
-# parameterize each dirichlet distribution. Iters will set the number of
-# times your sampler will iterate.
-alpha = np.ones(n_topics) * 0.1
-gamma = 0.001
-iters = 10
 
 hyperparmeter_string = """Number of Topics: {}
 Number of Iterations: {}
