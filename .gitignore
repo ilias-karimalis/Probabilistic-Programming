@@ -137,5 +137,6 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
-# Remove idea files
+# Remove editor files
 .idea/
+.vscode/
