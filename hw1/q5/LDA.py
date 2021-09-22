@@ -36,7 +36,7 @@ words = WS
 # Initialize Hyperparameters:
 # ***************************
 # Wether to train on all or part of the data
-mini_run = True
+mini_run = False
 # number of topics
 n_topics = 20
 # prior parameters, alpha parameterizes the dirichlet to regularize the
@@ -47,7 +47,7 @@ n_topics = 20
 # times your sampler will iterate.
 alpha = np.ones(n_topics) * 0.1
 gamma = 0.001
-iters = 10
+iters = 150
 
 # subset data, EDIT THIS PART ONCE YOU ARE CONFIDENT THE MODEL IS WORKING
 # PROPERLY IN ORDER TO USE THE ENTIRE DATA SET
