@@ -7,10 +7,7 @@ from joint_log_lik import initialize_logBeta, joint_log_lik
 from sample_topic_assignment import sample_topic_assignment
 from tqdm.auto import tqdm
 from datetime import datetime
-
-
-import timeit
-
+import os
 
 bagofwords = loadmat('bagofwords_nips.mat')
 WS = bagofwords['WS'][0] - 1  # go to 0 indexed
@@ -37,8 +34,10 @@ words = WS
 
 # subset data, EDIT THIS PART ONCE YOU ARE CONFIDENT THE MODEL IS WORKING
 # PROPERLY IN ORDER TO USE THE ENTIRE DATA SET
-#words = words[document_assignment < 100]
-#document_assignment  = document_assignment[document_assignment < 100]
+mini_run = True
+if mini_run:
+    words = words[document_assignment < 100]
+    document_assignment  = document_assignment[document_assignment < 100]
 
 n_docs = document_assignment.max() + 1
 
@@ -77,8 +76,14 @@ topic_N = topic_counts.sum(axis=1)
 # parameterize each dirichlet distribution. Iters will set the number of
 # times your sampler will iterate.
 alpha = np.ones(n_topics) * 0.1
-gamma = np.ones(alphabet_size) * 0.001
-iters = 150
+gamma = 0.001
+iters = 10
+
+hyperparmeter_string = """Number of Topics: {}
+Number of Iterations: {}
+Alpha: {}
+Gamma: {}
+Run Size: {}""".format(n_topics, iters, alpha[0], gamma, "Small Run" if mini_run else "Full Run")
 
 logBeta_alpha, logBeta_gamma = initialize_logBeta(alpha, gamma)
 
@@ -105,8 +110,17 @@ for i in tqdm(range(iters)):
 
 jll.append(joint_log_lik(doc_counts,topic_counts,alpha,gamma,logBeta_alpha, logBeta_gamma))
 
+# Setup Results folder for this run:
+date_time_string = datetime.today().strftime('%Y-%m-%d-%H:%M:%S')
+result_dir = "results/" + date_time_string + "/"
+os.mkdir(result_dir)
+
+# Add Hyperparameter file to the results directory
+with open(result_dir + "hyperparameters.txt", 'w') as f:
+    f.write(hyperparmeter_string)
+
 plt.plot(jll)
-plt.savefig("results/" + datetime.today().strftime('%Y-%m-%d-%H:%M:%S') + ".png")
+plt.savefig(result_dir + "plot.pdf")
 
 # find the 10 most probable words of the 20 topics:
 fstr = ''
@@ -117,7 +131,7 @@ for topic in range(n_topics):
         fstr += WO[word][0]
         fstr += "\n"
 
-with open('most_probable_words_per_topic','w') as f:
+with open(result_dir + 'most_probable_words_per_topic','w') as f:
     f.write(fstr)
 
 
@@ -131,5 +145,5 @@ for doc in reversed(top_docs):
     fstr += "Document {}, Title: {}\n".format(doc, titles[doc])
     fstr += str(doc_counts[0].dot(doc_counts[doc])/(np.linalg.norm(doc_counts[0])*np.linalg.norm(doc_counts[doc]))) + "\n"
 
-with open('most_similar_titles_to_0','w') as f:
+with open(result_dir + 'most_similar_titles_to_0','w') as f:
     f.write(fstr)

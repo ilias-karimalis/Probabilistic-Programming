@@ -42,9 +42,10 @@ def sample_topic_assignment(topic_assignment,
         doc_counts: updated doc_counts array
         topic_N: updated count of words assigned to each topic
     """
-    # TODO
     (n,) = topic_assignment.shape
-    (n_topics, alphabet_size) = topic_counts.shape
+    (_, alphabet_size) = topic_counts.shape
+
+    alphabet_size_times_gamma = alphabet_size*gamma
 
     for i in range(n):
         word = words[i]
@@ -56,12 +57,12 @@ def sample_topic_assignment(topic_assignment,
         topic_counts[topic, word] -= 1
         topic_N[topic] -= 1
 
-        #iiprint("x: {} \ny: {}\nw: {} \nz: {}".format(x,y,w,z))
-        p_z = (topic_counts[:,word]+gamma[word])*(doc_counts[document,:]+alpha)/((np.sum(topic_counts, axis=1)+alphabet_size*gamma[word])*(doc_N[document]+n_topics*alpha))
+        p_z = (doc_counts[document,:] + alpha) * (topic_counts[:, word] + gamma) / (topic_N + alphabet_size_times_gamma)
         p_z = p_z / np.sum(p_z)
         sample = np.argmax(np.random.multinomial(1, p_z))
 
         topic_assignment[i] = sample
+
         doc_counts[document, sample] += 1
         topic_counts[sample, word] += 1
         topic_N[sample] += 1
