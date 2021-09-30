@@ -42,6 +42,8 @@ def sample_topic_assignment(topic_assignment,
         doc_counts: updated doc_counts array
         topic_N: updated count of words assigned to each topic
     """
+
+    ### One whole iteration of Gibbs
     (n,) = topic_assignment.shape
     (n_topics, alphabet_size) = topic_counts.shape
 
@@ -60,13 +62,9 @@ def sample_topic_assignment(topic_assignment,
 
         p_z = (doc_counts[document,:] + alpha) * (topic_counts[:, word] + gamma) / (topic_N + alphabet_size_times_gamma)
         p_z /= np.sum(p_z)
-        #print(sum(p_z))
-        #print(p_z)
-        #draw = np.random.multinomial(1, p_z)
         sample = np.random.choice(n_topics, p=p_z)
-        #print(draw, sample)
 
-        topic_assignment[i] =  sample#np.argmax(p_z)
+        topic_assignment[i] =  sample
 
         doc_counts[document, sample] += 1
         topic_counts[sample, word] += 1

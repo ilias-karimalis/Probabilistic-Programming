@@ -36,7 +36,7 @@ words = WS
 # Initialize Hyperparameters:
 # ***************************
 # Wether to train on all or part of the data
-mini_run = True
+mini_run = False
 # number of topics
 n_topics = 20
 # prior parameters, alpha parameterizes the dirichlet to regularize the
@@ -46,8 +46,8 @@ n_topics = 20
 # parameterize each dirichlet distribution. Iters will set the number of
 # times your sampler will iterate.
 alpha = np.ones(n_topics) * 0.5
-gamma = 0.5
-iters = 200
+gamma = 0.001
+iters = 1000
 
 # subset data, EDIT THIS PART ONCE YOU ARE CONFIDENT THE MODEL IS WORKING
 # PROPERLY IN ORDER TO USE THE ENTIRE DATA SET
@@ -132,7 +132,7 @@ plt.plot(jll)
 plt.savefig(result_dir + "full_plot.pdf")
 plt.show()
 
-plt.plot(range(99, iters+1), jll[99:])
+plt.plot(range(99, iters), jll[99:])
 plt.savefig(result_dir + "burnin_removal_plot.pdf")
 plt.show()
 
@@ -168,4 +168,4 @@ for doc in reversed(top_docs):
     fstr += str(doc_counts[0].dot(doc_counts[doc])/(np.linalg.norm(doc_counts[0])*np.linalg.norm(doc_counts[doc]))) + "\n"
 
 with open(result_dir + 'most_similar_titles_to_0','w') as f:
-    Falsef.write(fstr)
+    f.write(fstr)
