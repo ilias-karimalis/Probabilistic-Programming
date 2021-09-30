@@ -1,0 +1,5 @@
+Number of Topics: 20
+Number of Iterations: 150
+Alpha: 1.0
+Gamma: 1
+Run Size: Small Run

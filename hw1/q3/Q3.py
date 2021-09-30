@@ -27,7 +27,7 @@ def p_R_given_C(r, c):
 
 def p_W_given_S_R(w, s, r):
     p = np.array([
-        [[1.0, 0.1], [0.1, 0.001]],  # w = False
+        [[1.0, 0.1], [0.1, 0.01]],  # w = False
         [[0.0, 0.9], [0.9, 0.99]],  # w = True
     ])
     return p[w, s, r]

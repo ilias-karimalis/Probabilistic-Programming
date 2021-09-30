@@ -3,7 +3,7 @@ from scipy.io import loadmat
 import numpy as np
 import matplotlib.pyplot as plt
 
-from joint_log_lik import initialize_logBeta, joint_log_lik
+from joint_log_lik import initialize_jll_constants, joint_log_lik
 from sample_topic_assignment import sample_topic_assignment
 from tqdm.auto import tqdm
 from datetime import datetime
@@ -45,9 +45,9 @@ n_topics = 20
 # These parameters are both scalars and really we use alpha * ones() to
 # parameterize each dirichlet distribution. Iters will set the number of
 # times your sampler will iterate.
-alpha = np.ones(n_topics) * 0.1
-gamma = 0.001
-iters = 150
+alpha = np.ones(n_topics) * 0.5
+gamma = 0.5
+iters = 1000
 
 # subset data, EDIT THIS PART ONCE YOU ARE CONFIDENT THE MODEL IS WORKING
 # PROPERLY IN ORDER TO USE THE ENTIRE DATA SET
@@ -89,7 +89,16 @@ Alpha: {}
 Gamma: {}
 Run Size: {}""".format(n_topics, iters, alpha[0], gamma, "Small Run" if mini_run else "Full Run")
 
-logBeta_alpha, logBeta_gamma = initialize_logBeta(alpha, gamma)
+logBeta_alpha, logBeta_gamma = initialize_jll_constants(alpha, gamma, n_docs)
+
+# Setup Results folder for this run:
+date_time_string = datetime.today().strftime('%Y-%m-%d-%H:%M:%S')
+result_dir = "results/" + date_time_string + "/"
+os.mkdir(result_dir)
+
+# Add Hyperparameter file to the results directory
+with open(result_dir + "hyperparameters.txt", 'w') as f:
+    f.write(hyperparmeter_string)
 
 jll = []
 for i in tqdm(range(iters)):
@@ -114,17 +123,15 @@ for i in tqdm(range(iters)):
 
 jll.append(joint_log_lik(doc_counts,topic_counts,alpha,gamma,logBeta_alpha, logBeta_gamma))
 
-# Setup Results folder for this run:
-date_time_string = datetime.today().strftime('%Y-%m-%d-%H:%M:%S')
-result_dir = "results/" + date_time_string + "/"
-os.mkdir(result_dir)
 
-# Add Hyperparameter file to the results directory
-with open(result_dir + "hyperparameters.txt", 'w') as f:
-    f.write(hyperparmeter_string)
 
 plt.plot(jll)
-plt.savefig(result_dir + "plot.pdf")
+plt.savefig(result_dir + "full_plot.pdf")
+plt.show()
+
+plt.plot(range(99, iters+1), jll[99:])
+plt.savefig(result_dir + "burnin_removal_plot.pdf")
+plt.show()
 
 # find the 10 most probable words of the 20 topics:
 fstr = ''
