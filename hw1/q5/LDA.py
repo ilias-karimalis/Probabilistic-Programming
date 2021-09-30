@@ -36,7 +36,7 @@ words = WS
 # Initialize Hyperparameters:
 # ***************************
 # Wether to train on all or part of the data
-mini_run = False
+mini_run = True
 # number of topics
 n_topics = 20
 # prior parameters, alpha parameterizes the dirichlet to regularize the
@@ -47,7 +47,7 @@ n_topics = 20
 # times your sampler will iterate.
 alpha = np.ones(n_topics) * 0.5
 gamma = 0.5
-iters = 1000
+iters = 200
 
 # subset data, EDIT THIS PART ONCE YOU ARE CONFIDENT THE MODEL IS WORKING
 # PROPERLY IN ORDER TO USE THE ENTIRE DATA SET
@@ -101,8 +101,8 @@ with open(result_dir + "hyperparameters.txt", 'w') as f:
     f.write(hyperparmeter_string)
 
 jll = []
+max_jll = (-1, -np.inf, None, None, None, None) # (argmax_jll, max_jll, max_topic_assignment, max_topic_counts, max_doc_counts, max_topic_N)
 for i in tqdm(range(iters)):
-    jll.append(joint_log_lik(doc_counts,topic_counts,alpha,gamma,logBeta_alpha,logBeta_gamma))
     
     prm = np.random.permutation(words.shape[0])
     
@@ -121,8 +121,11 @@ for i in tqdm(range(iters)):
                                 words,
                                 document_assignment)
 
-jll.append(joint_log_lik(doc_counts,topic_counts,alpha,gamma,logBeta_alpha, logBeta_gamma))
+    curr_jll = joint_log_lik(doc_counts,topic_counts,alpha,gamma,logBeta_alpha, logBeta_gamma) 
+    jll.append(curr_jll)
 
+    if curr_jll > max_jll[1]:
+        max_jll = (i, curr_jll, topic_assignment, topic_counts, doc_counts, topic_N)
 
 
 plt.plot(jll)
@@ -132,6 +135,14 @@ plt.show()
 plt.plot(range(99, iters+1), jll[99:])
 plt.savefig(result_dir + "burnin_removal_plot.pdf")
 plt.show()
+
+#
+# For the following questions we proceed by using the single sample that obtained the highest JLL
+#
+topic_assignment = max_jll[2]
+topic_counts = max_jll[3]
+doc_counts = max_jll[4]
+topic_N = max_jll[5]
 
 # find the 10 most probable words of the 20 topics:
 fstr = ''
@@ -157,4 +168,4 @@ for doc in reversed(top_docs):
     fstr += str(doc_counts[0].dot(doc_counts[doc])/(np.linalg.norm(doc_counts[0])*np.linalg.norm(doc_counts[doc]))) + "\n"
 
 with open(result_dir + 'most_similar_titles_to_0','w') as f:
-    f.write(fstr)
+    Falsef.write(fstr)
