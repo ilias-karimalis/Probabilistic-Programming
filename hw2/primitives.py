@@ -50,14 +50,8 @@ def function_primitives() -> Env:
         'last': lambda x: x[0][x[0].size()[0] - 1],
         'append': primitive_append,
 
-        # Control Flow
-        # if
-        # defn
-        # let
-
         # Distributions
         'normal': lambda args: dist.Normal(args),
-        # lambda mean, covariance: torch.distributions.normal.Normal(mean, covariance),
         'beta': lambda args: dist.Beta(args),
         'exponential': lambda args: dist.Exponential(args),
         'uniform': lambda args: dist.UniformContinuous(args),

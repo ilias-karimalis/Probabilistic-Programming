@@ -1,5 +1,6 @@
-
+import numpy as np
 import torch
+from matplotlib import pyplot as plt
 
 from daphne import daphne
 
@@ -109,13 +110,21 @@ def probabilistic_eval(exp):
         dist = deterministic_eval(dist_arg)
         return dist.sample()
 
+
 # Topologically sorts the graph
 def topologicalSort(vertices, edges):
     # Mark all the vertices as not visited
     visited = [False]*len(vertices)
     ret = []
 
-    # Define helper function
+    # Define helper functions
+    def getVertexNumber(v, vertices):
+        for (i, vert) in enumerate(vertices):
+            if v == vert:
+                return i
+
+        raise Exception(f"Vertex {v} not in graph")
+
     def topoSortHelper(i, visited, ret, vertices, edges):
         # We are currently visiting vertex i
         visited[i] = True
@@ -138,14 +147,6 @@ def topologicalSort(vertices, edges):
             topoSortHelper(i, visited, ret, vertices, edges)
 
     return ret
-
-
-def getVertexNumber(v, vertices):
-    for (i,vert) in enumerate(vertices):
-        if v == vert:
-            return i
-
-    raise Exception(f"Vertex {v} not in graph")
 
 
 
@@ -199,7 +200,6 @@ def run_probabilistic_tests():
         if not isinstance(names, list):
             names = [names]
             singleton = True
-        print(names)
 
         p_val = run_prob_test(stream, truth, num_samples, names, singleton)
         
@@ -213,18 +213,52 @@ def run_probabilistic_tests():
         
 if __name__ == '__main__':
     
-    #print("\nStarting Deterministic Tests:")
+    print("\nStarting Deterministic Tests:")
     #run_deterministic_tests()
     print("\nStarting Probabilistic Tests:")
-    run_probabilistic_tests()
+    #run_probabilistic_tests()
 
+    num_samples = 1e4
 
-
-    # Usually 1, 5
-    for i in range(1,5):
+    for i in range(3,4):
         graph = daphne(['graph','-i','../hw2/programs/{}.daphne'.format(i)])
         print(graph)
         print('\n\n\nSample of prior of program {}:'.format(i))
-        print(sample_from_joint(graph))
+
+        stream = get_stream(graph)
+
+        names = graph[2]
+        singleton = False
+
+        if not isinstance(names, list):
+            names = [names]
+            singleton = True
+        else:
+            names = names[1:]
+
+        samples = []
+        for _ in range(int(num_samples)):
+            samples.append(next(stream))
+
+        samples = np.array([s.numpy() for s in samples])
+        print(samples)
+
+        for (j, name) in enumerate(names):
+            #plt.subplot(len(names) , 1, i + 1)
+            if singleton:
+                plt.hist(samples, bins=3)
+            else:
+                plt.hist(samples[:, j], bins=10)
+            plt.title(name)
+            plt.savefig(f'./3_dapne_{name}.png')
+            plt.clf()
+
+        if singleton:
+            print(f"{names[0]} mean is {samples.mean()}")
+        else:
+            for (n, name) in enumerate(names):
+                print(f"{name} mean is {samples[:, n].mean()}")
+
+        print(f"Finished plot prep for program {i}")
 
     

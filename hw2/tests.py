@@ -47,16 +47,21 @@ def run_prob_test(stream, truth, num_samples, names, singleton):
     for _ in range(int(num_samples)):
         samples.append(next(stream))
 
+    samples = np.array(samples)
+
     for (i, name) in enumerate(names):
         plt.subplot(len(names), 1, i+1)
         if singleton:
             plt.hist(samples, bins=100)
         else:
-            plt.hist([s[i] for s in samples], bins=10)
+            plt.hist(samples[:, i], bins=10)
         plt.title(name)
     print("Finished plot prep")
     plt.tight_layout()
     plt.show()
+
+    if singleton:
+        print(f"{names[0]} mean is {samples.mean()}")
     
     distrs = {
             'normal' : norm,
@@ -67,7 +72,7 @@ def run_prob_test(stream, truth, num_samples, names, singleton):
     
     truth_dist = distrs[truth[0]](*truth[1:])
 
-    d,p_val = kstest(np.array(samples), truth_dist.cdf)
+    d,p_val = kstest(samples, truth_dist.cdf)
     
     return p_val
     

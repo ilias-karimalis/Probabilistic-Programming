@@ -1,4 +1,6 @@
+import numpy as np
 import torch
+from matplotlib import pyplot as plt
 
 from daphne import daphne
 from primitives import function_primitives
@@ -49,6 +51,7 @@ class UserFunction:
 
 core = World(parent=function_primitives())
 
+
 # TODO add sigma to evaluator
 def eval(exp: Exp, env=core):
     """
@@ -60,9 +63,6 @@ def eval(exp: Exp, env=core):
              being currently evaluated
     @returns: the evaluated Expression or a new Env
     """
-    
-    # We must now decide when to form a new World and when to propagate up info
-
     # exp is a variable reference
     if isinstance(exp, Symbol):
         return env[exp]
@@ -70,7 +70,7 @@ def eval(exp: Exp, env=core):
     elif isinstance(exp, Number):
         return torch.tensor(float(exp))
 
-    ### exp is some kind of op
+    # exp is some kind of op
     op, *args = exp
     # exp is an if statement
     if op == 'if':
@@ -170,7 +170,41 @@ if __name__ == '__main__':
     #run_deterministic_tests()
     #run_probabilistic_tests()
 
-    for i in range(4, 5):
+    num_samples = 1e4
+
+    for i in range(2, 3):
         ast = daphne(['desugar', '-i', '../hw2/programs/{}.daphne'.format(i)])
         print('\n\n\nSample of prior of program {}:'.format(i))
-        print(evaluate_program(ast)[0])
+
+        stream = get_stream(ast)
+
+        names = ["slope", "bias"]
+        singleton = False
+
+        if not isinstance(names, list):
+            names = [names]
+            singleton = True
+
+        samples = []
+        for _ in range(int(num_samples)):
+            samples.append(next(stream))
+
+        samples = np.array([s.numpy() for s in samples])
+        print(samples)
+
+        for (i, name) in enumerate(names):
+            plt.subplot(len(names), 1, i + 1)
+            if singleton:
+                plt.hist(samples, bins=80)
+            else:
+                plt.hist(samples[:, i], bins=80)
+            plt.title(name)
+            print(f"Finished plot prep for program {i}")
+        plt.tight_layout()
+        plt.show()
+
+        if singleton:
+            print(f"{names[0]} mean is {samples.mean()}")
+        else:
+            for (n, name) in enumerate(names):
+                print(f"{name} mean is {samples[:, i].mean()}")
