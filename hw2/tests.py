@@ -1,4 +1,5 @@
 import torch
+from matplotlib import pyplot as plt
 from scipy.stats import kstest, norm, beta, expon
 
 import numpy as np
@@ -41,10 +42,21 @@ def is_tol(a, b):
 
 
 
-def run_prob_test(stream, truth, num_samples):
+def run_prob_test(stream, truth, num_samples, names, singleton):
     samples = []
-    for i in range(int(num_samples)):
+    for _ in range(int(num_samples)):
         samples.append(next(stream))
+
+    for (i, name) in enumerate(names):
+        plt.subplot(len(names), 1, i+1)
+        if singleton:
+            plt.hist(samples, bins=100)
+        else:
+            plt.hist([s[i] for s in samples], bins=10)
+        plt.title(name)
+    print("Finished plot prep")
+    plt.tight_layout()
+    plt.show()
     
     distrs = {
             'normal' : norm,
@@ -53,7 +65,6 @@ def run_prob_test(stream, truth, num_samples):
             'normalmix' : normalmix,
             }
     
-    print(truth)
     truth_dist = distrs[truth[0]](*truth[1:])
 
     d,p_val = kstest(np.array(samples), truth_dist.cdf)
