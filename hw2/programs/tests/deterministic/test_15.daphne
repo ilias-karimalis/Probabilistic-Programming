@@ -1,0 +1,3 @@
+(defn add-2 [elem1 elem2]
+    (+ elem1 elem2))
+(add-2 3 6)
