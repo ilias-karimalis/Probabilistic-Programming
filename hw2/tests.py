@@ -42,27 +42,12 @@ def is_tol(a, b):
 
 
 
-def run_prob_test(stream, truth, num_samples, names, singleton):
+def run_prob_test(stream, truth, num_samples):
     samples = []
     for _ in range(int(num_samples)):
         samples.append(next(stream))
 
     samples = np.array(samples)
-
-    for (i, name) in enumerate(names):
-        plt.subplot(len(names), 1, i+1)
-        if singleton:
-            plt.hist(samples, bins=100)
-        else:
-            plt.hist(samples[:, i], bins=10)
-        plt.title(name)
-    print("Finished plot prep")
-    plt.tight_layout()
-    plt.show()
-
-    if singleton:
-        print(f"{names[0]} mean is {samples.mean()}")
-    
     distrs = {
             'normal' : norm,
             'beta' : beta,

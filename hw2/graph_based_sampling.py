@@ -1,104 +1,48 @@
-import numpy as np
 import torch
-from matplotlib import pyplot as plt
-
 from daphne import daphne
-
-from primitives import function_primitives #TODO
+from hw2.process_results import process_results
+from primitives import core
 from tests import is_tol, run_prob_test,load_truth
 
-# Put all function mappings from the deterministic language environment to your
-# Python evaluation context here:
+env = core
 
-### Language Types
-Symbol = str
-Number = (int, float)
-Atom = (Symbol, Number)
-List = list
-Exp = (Atom, List)
-Env = dict
-
-
-class World(dict):
-    def __init__(self, params=(), args=(), parent=None):
-        dict.__init__(self, zip(params, args))
-        self.parent = parent
-
-    def __getitem__(self, key):
-        try:
-            value = dict.__getitem__(self, key)
-        except:
-            value = self.parent[key]
-        return value
-
-
-class UserFunction:
-    def __init__(self, params, body, env):
-        self.params = params
-        self.body = body
-        self.env = env
-
-    def __call__(self, args):
-        for (k, v) in zip(self.params, args):
-            self.env[k] = v
-        return eval(self.body, self.env)
-
-
-env = function_primitives()
 
 def deterministic_eval(exp):
-    # exp is a variable reference
-    if isinstance(exp, Symbol):
-        return env[exp]
-    # exp is a number literal
-    elif isinstance(exp, Number):
+    if type(exp) in [int, float]:
         return torch.tensor(float(exp))
 
-    ### exp is some kind of op
-    op, *args = exp
-    # exp is an if statement
-    if op == 'if':
-        (test, conseq, alt) = args
-        new_exp = conseq if deterministic_eval(test) else alt
-        return deterministic_eval(new_exp)
-    # exp is a let statement
-    elif op == 'let':
-        (var, value), expr = args
+    elif type(exp) == str:
+        return env[exp]
 
-        new_value = deterministic_eval(value)
-        env[var] = new_value
-        return deterministic_eval(expr)
-    # exp is a call to function defined in env
-    else:
-        proc = deterministic_eval(exp[0])
-        args = [deterministic_eval(arg) for arg in exp[1:]]
-        return proc(args)
+    op, *args = exp
+    if op == 'if':
+        test, conseq, alt = args
+        b = deterministic_eval(test)
+        return deterministic_eval(conseq if b else alt)
+
+    # Else call procedure:
+    proc = deterministic_eval(op)
+    c = [0] * len(args)
+    for (i, arg) in enumerate(args):
+        c[i] = deterministic_eval(arg)
+    return proc(c)
 
 
 def sample_from_joint(graph):
-    "This function does ancestral sampling starting from the prior."
-    #print(graph)
+    # This function does ancestral sampling starting from the prior.
     graph_structure = graph[1]
-
-    V = graph_structure['V']
-    A = graph_structure['A']
-    P = graph_structure['P']
-    Y = graph_structure['Y']
-
-    #print(f"Result {graph[2]}")
+    nodes = graph_structure['V']
+    edges = graph_structure['A']
+    link_functions = graph_structure['P']
     result_nodes = graph[2]
 
-    #print(f'V: {V}')
-    #print(f'A: {A}')
-    #print(f'P: {P}')
-    #print(f'Y: {Y}')
-
-    sorted_nodes = topologicalSort(V, A)
+    sorted_nodes = topologicalSort(nodes, edges)
     for node in sorted_nodes:
-        value = probabilistic_eval(P[node])
+        value = probabilistic_eval(link_functions[node])
         env[node] = value
 
     return deterministic_eval(result_nodes)
+
 
 def probabilistic_eval(exp):
     op, *args = exp
@@ -149,8 +93,6 @@ def topologicalSort(vertices, edges):
     return ret
 
 
-
-
 def get_stream(graph):
     """Return a stream of prior samples
     Args: 
@@ -160,10 +102,6 @@ def get_stream(graph):
     while True:
         yield sample_from_joint(graph)
 
-
-
-
-#Testing:
 
 def run_deterministic_tests():
     
@@ -180,7 +118,6 @@ def run_deterministic_tests():
         print('Test passed')
         
     print('All deterministic tests passed')
-    
 
 
 def run_probabilistic_tests():
@@ -189,76 +126,31 @@ def run_probabilistic_tests():
     max_p_value = 1e-4
     
     for i in range(1,7):
-        #note: this path should be with respect to the daphne path!        
         graph = daphne(['graph', '-i', '../hw2/programs/tests/probabilistic/test_{}.daphne'.format(i)])
         truth = load_truth('programs/tests/probabilistic/test_{}.truth'.format(i))
         
         stream = get_stream(graph)
 
-        names = graph[2]
-        singleton = False
-        if not isinstance(names, list):
-            names = [names]
-            singleton = True
-
-        p_val = run_prob_test(stream, truth, num_samples, names, singleton)
+        p_val = run_prob_test(stream, truth, num_samples)
         
         print('p value', p_val)
         assert(p_val > max_p_value)
     
-    print('All probabilistic tests passed')    
-
-
+    print('All probabilistic tests passed')
         
         
 if __name__ == '__main__':
     
-    print("\nStarting Deterministic Tests:")
-    #run_deterministic_tests()
-    print("\nStarting Probabilistic Tests:")
-    #run_probabilistic_tests()
+    run_deterministic_tests()
+    run_probabilistic_tests()
 
-    num_samples = 1e4
+    # Bins to use for the histograms of each of the programs
+    bins = [50, 50, 3, 50]
 
-    for i in range(3,4):
+    for i in range(1,5):
         graph = daphne(['graph','-i','../hw2/programs/{}.daphne'.format(i)])
-        print(graph)
         print('\n\n\nSample of prior of program {}:'.format(i))
 
         stream = get_stream(graph)
-
-        names = graph[2]
-        singleton = False
-
-        if not isinstance(names, list):
-            names = [names]
-            singleton = True
-        else:
-            names = names[1:]
-
-        samples = []
-        for _ in range(int(num_samples)):
-            samples.append(next(stream))
-
-        samples = np.array([s.numpy() for s in samples])
-        print(samples)
-
-        for (j, name) in enumerate(names):
-            #plt.subplot(len(names) , 1, i + 1)
-            if singleton:
-                plt.hist(samples, bins=3)
-            else:
-                plt.hist(samples[:, j], bins=10)
-            plt.title(name)
-            plt.savefig(f'./3_dapne_{name}.png')
-            plt.clf()
-
-        if singleton:
-            print(f"{names[0]} mean is {samples.mean()}")
-        else:
-            for (n, name) in enumerate(names):
-                print(f"{name} mean is {samples[:, n].mean()}")
-
-        print(f"Finished plot prep for program {i}")
-
+        process_results(stream, f"{i}.daphne", "graph_based_sampler", bins[i-1])
     
