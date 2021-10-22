@@ -1,40 +1,8 @@
-import numpy as np
 import torch
-from matplotlib import pyplot as plt
-
 from daphne import daphne
-from primitives import function_primitives
+from process_results import process_results
+from primitives import core
 from tests import is_tol, load_truth, run_prob_test
-from tqdm.auto import tqdm
-
-### Language Types
-Symbol = str
-Number = (int, float)
-Atom = (Symbol, Number)
-List = list
-Exp = (Atom, List)
-Env = dict
-
-
-# envs are a recursive structure as such we'll define them as a subclass of
-# Dict, which records the parent from which it is based.
-#
-# Suppose we have: {Core} -> {Let1} -> {Let2}
-# If we are searching for symbol x in Let2 and cannot find it, we will proceed
-# by searching in Let1 (and then Core) recursively.
-
-# Still not completely sure this is needed
-class World(dict):
-    def __init__(self, params=(), args=(), parent=None):
-        dict.__init__(self, zip(params, args))
-        self.parent = parent
-
-    def __getitem__(self, key):
-        try:
-            value = dict.__getitem__(self, key)
-        except:
-            value = self.parent[key]
-        return value
 
 
 class UserFunction:
@@ -46,54 +14,41 @@ class UserFunction:
     def __call__(self, args):
         for (k, v) in zip(self.params, args):
             self.env[k] = v
-        return eval(self.body, self.env)
+        return evaluate(self.body, {}, self.env)[0]
 
 
-core = World(parent=function_primitives())
+def evaluate(exp, sigma, env):
+    if type(exp) in [int, float]:
+        return torch.tensor(float(exp)), sigma
 
+    elif type(exp) == str:
+        return env[exp], sigma
 
-# TODO add sigma to evaluator
-def eval(exp: Exp, env=core):
-    """
-    Evaluate an expression in an environment
-
-    @arguments:
-        exp: the currect Expression to be evaluated
-        env: a Dictionary representing the defined symbol mappings for the exp
-             being currently evaluated
-    @returns: the evaluated Expression or a new Env
-    """
-    # exp is a variable reference
-    if isinstance(exp, Symbol):
-        return env[exp]
-    # exp is a number literal
-    elif isinstance(exp, Number):
-        return torch.tensor(float(exp))
-
-    # exp is some kind of op
     op, *args = exp
-    # exp is an if statement
-    if op == 'if':
-        (test, conseq, alt) = args
-        new_exp = conseq if eval(test, env) else alt
-        return eval(new_exp, env)
-    # exp is a let statement
+    if op == 'sample':
+        dist, sigma = evaluate(exp[1], sigma, env)
+        return dist.sample(), sigma
+
+    elif op == 'observe':
+        fake_sample = exp[2]
+        return evaluate(fake_sample, sigma, env)
+
     elif op == 'let':
-        (var, value), expr = args
+        value, sigma = evaluate(args[0][1], sigma, env)
+        env[args[0][0]] = value
+        return evaluate(args[1], sigma, env)
 
-        new_value = eval(value, env)
-        env[var] = new_value
-        return eval(expr, env)
-    # exp is a call to function defined in env
-    else:
-        proc = eval(exp[0], env)
-        args = [eval(arg, env) for arg in exp[1:]]
-        return proc(args)
+    elif op == 'if':
+        test, conseq, alt = args
+        b, sigma = evaluate(test, sigma, env)
+        return evaluate(conseq if b else alt, sigma, env)
 
-
-def primitive_user_function(arg_list, body, env):
-    
-    return lambda x: eval(body, env.update(zip(arg_list, x[0])))
+    # Else call procedure:
+    proc, sigma = evaluate(op, sigma, env)
+    c = [0] * len(args)
+    for (i, arg) in enumerate(args):
+        c[i], sigma = evaluate(arg, sigma, env)
+    return proc(c), sigma
 
 
 def evaluate_program(ast):
@@ -102,22 +57,14 @@ def evaluate_program(ast):
         ast: json FOPPL program
     Returns: sample from the prior of ast
     """
-    ast_rem, world = parse_user_functions(ast, core)
-    res = eval(ast_rem, env=world)
-    return res
+    sigma = {}
+    env = core
 
-
-def parse_user_functions(ast, world):
-    ret = []
-    for (index, node) in enumerate(ast):
-        if node[0] != 'defn':
-            ret = node
+    for (i, exp) in enumerate(ast):
+        if type(exp) != list or exp[0] != 'defn':
             break
-
-        (_, func_name, arg_list, body) = node
-        world[func_name] = UserFunction(arg_list, body, world)
-
-    return ret, world
+        env[exp[1]] = UserFunction(exp[2], exp[3], env)
+    return evaluate(ast[i], sigma, env)[0]
 
 
 def get_stream(ast):
@@ -127,7 +74,7 @@ def get_stream(ast):
 
 
 def run_deterministic_tests():
-    for i in tqdm(range(1, 15)):
+    for i in range(1, 15):
         # note: this path should be with respect to the daphne path!
         ast = daphne(['desugar', '-i', '../hw2/programs/tests/deterministic/test_{}.daphne'.format(i)])
         truth = load_truth('programs/tests/deterministic/test_{}.truth'.format(i))
@@ -152,10 +99,6 @@ def run_probabilistic_tests():
         truth = load_truth('programs/tests/probabilistic/test_{}.truth'.format(i))
 
         stream = get_stream(ast)
-
-        names = ast[-1]
-        print(names)
-
         p_val = run_prob_test(stream, truth, num_samples)
 
         print('p value', p_val)
@@ -166,45 +109,14 @@ def run_probabilistic_tests():
 
 
 if __name__ == '__main__':
+    run_deterministic_tests()
+    run_probabilistic_tests()
 
-    #run_deterministic_tests()
-    #run_probabilistic_tests()
-
-    num_samples = 1e4
-
-    for i in range(2, 3):
+    # Bins to use for the histograms of each of the programs
+    bins = [50, 50, 3, 50]
+    for i in range(1, 5):
         ast = daphne(['desugar', '-i', '../hw2/programs/{}.daphne'.format(i)])
         print('\n\n\nSample of prior of program {}:'.format(i))
 
         stream = get_stream(ast)
-
-        names = ["slope", "bias"]
-        singleton = False
-
-        if not isinstance(names, list):
-            names = [names]
-            singleton = True
-
-        samples = []
-        for _ in range(int(num_samples)):
-            samples.append(next(stream))
-
-        samples = np.array([s.numpy() for s in samples])
-        print(samples)
-
-        for (i, name) in enumerate(names):
-            plt.subplot(len(names), 1, i + 1)
-            if singleton:
-                plt.hist(samples, bins=80)
-            else:
-                plt.hist(samples[:, i], bins=80)
-            plt.title(name)
-            print(f"Finished plot prep for program {i}")
-        plt.tight_layout()
-        plt.show()
-
-        if singleton:
-            print(f"{names[0]} mean is {samples.mean()}")
-        else:
-            for (n, name) in enumerate(names):
-                print(f"{name} mean is {samples[:, i].mean()}")
+        process_results(stream, f"{i}.daphne", "evaluation_based_sampler", bins[i - 1])
