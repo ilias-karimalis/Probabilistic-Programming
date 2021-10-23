@@ -5,18 +5,6 @@ from primitives import core
 from tests import is_tol, load_truth, run_prob_test
 
 
-class UserFunction:
-    def __init__(self, params, body, env):
-        self.params = params
-        self.body = body
-        self.env = env
-
-    def __call__(self, args):
-        for (k, v) in zip(self.params, args):
-            self.env[k] = v
-        return evaluate(self.body, {}, self.env)[0]
-
-
 def evaluate(exp, sigma, env):
     if type(exp) in [int, float]:
         return torch.tensor(float(exp)), sigma
@@ -65,6 +53,18 @@ def evaluate_program(ast):
             break
         env[exp[1]] = UserFunction(exp[2], exp[3], env)
     return evaluate(ast[i], sigma, env)[0]
+
+
+class UserFunction:
+    def __init__(self, params, body, env):
+        self.params = params
+        self.body = body
+        self.env = env
+
+    def __call__(self, args):
+        for (k, v) in zip(self.params, args):
+            self.env[k] = v
+        return evaluate(self.body, {}, self.env)[0]
 
 
 def get_stream(ast):
