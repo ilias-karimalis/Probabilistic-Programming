@@ -17,8 +17,10 @@ def deterministic_eval(exp):
     op, *args = exp
     if op == 'if':
         test, conseq, alt = args
+        res_conseq = deterministic_eval(conseq)
+        res_alt = deterministic_eval(alt)
         b = deterministic_eval(test)
-        return deterministic_eval(conseq if b else alt)
+        return res_conseq if b else res_alt
 
     # Else call procedure:
     proc = deterministic_eval(op)
