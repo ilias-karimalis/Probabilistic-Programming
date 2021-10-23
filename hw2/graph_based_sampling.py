@@ -1,6 +1,6 @@
 import torch
 from daphne import daphne
-from hw2.process_results import process_results
+from process_results import process_results
 from primitives import core
 from tests import is_tol, run_prob_test,load_truth
 

@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 
 def process_results(program_stream, program_name, evaluator_type, n_bins=50):
-    num_samples = 1e4
+    num_samples = 1000
     samples = []
     for i in range(int(num_samples)):
         samples.append(next(program_stream))

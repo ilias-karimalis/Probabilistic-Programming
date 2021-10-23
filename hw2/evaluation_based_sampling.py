@@ -78,7 +78,7 @@ def run_deterministic_tests():
         # note: this path should be with respect to the daphne path!
         ast = daphne(['desugar', '-i', '../hw2/programs/tests/deterministic/test_{}.daphne'.format(i)])
         truth = load_truth('programs/tests/deterministic/test_{}.truth'.format(i))
-        ret, sig = evaluate_program(ast)
+        ret = evaluate_program(ast)
         try:
             assert (is_tol(ret, truth))
         except AssertionError:
