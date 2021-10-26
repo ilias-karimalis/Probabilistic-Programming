@@ -1,5 +1,6 @@
 import torch
-from distributions import Normal, Beta, Exponential, UniformContinuous, Categorical, Distribution
+from distributions import Normal, Beta, Exponential, UniformContinuous, Categorical, Distribution, Gamma, Dirichlet, \
+    Bernoulli, Dirac
 
 # These could all be made more strict by requiring that each operation receive
 # a list of arguments of the correct length !!!
@@ -21,7 +22,10 @@ core = {
     'mat-repmat': lambda args: args[0].repeat(args[1].long(), args[2].long()),
 
     # Logic Operators
-    '<': lambda x: x[0] < x[1],
+    '<': lambda args: args[0] < args[1],
+    '=': lambda args: args[0] == args[1],
+    'and': lambda args: args[0] and args[1],
+    'or': lambda args: args[0] or args[1],
 
     # Data Structures
     'vector': lambda args: primitive_list(args),
@@ -42,6 +46,10 @@ core = {
     'exponential': lambda args: Exponential(args),
     'uniform': lambda args: UniformContinuous(args),
     'discrete': lambda args: Categorical(args),
+    'gamma': lambda args: Gamma(args),
+    'dirichlet': lambda args: Dirichlet(args),
+    'flip': lambda args: Bernoulli(args),
+    'dirac': lambda args: Dirac(args)
 
 }
 
