@@ -51,6 +51,9 @@ def deterministic_eval(exp, env):
     if type(exp) in [int, float]:
         return torch.tensor(float(exp))
 
+    if type(exp) == bool:
+        return exp
+
     elif type(exp) == str:
         return env[exp]
 

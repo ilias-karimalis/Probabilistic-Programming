@@ -35,6 +35,8 @@ def mhgibbs_max_time(graph, max_time):
     edges = graph[1]['A']
     observed = graph[1]['Y']
 
+    print(link_functions)
+
     sampled = get_sampled(nodes, link_functions)
     markov_blankets = generate_markov_blankets(nodes, observed, edges)
 
