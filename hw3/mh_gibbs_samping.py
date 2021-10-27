@@ -1,72 +1,12 @@
 import torch
 from tqdm.auto import tqdm
+import time
 
 from primitives import core
-from toposort import topologicalSort
+from utils import topologicalSort, get_sampled, generate_markov_blankets, sample_from_priors, deterministic_eval
 
 
-def deterministic_eval(exp, env):
-    if type(exp) in [int, float]:
-        return torch.tensor(float(exp))
-
-    elif type(exp) == str:
-        return env[exp]
-
-    op, *args = exp
-    if op == 'if':
-        test, conseq, alt = args
-        res_conseq = deterministic_eval(conseq, env)
-        res_alt = deterministic_eval(alt, env)
-        b = deterministic_eval(test, env)
-        return res_conseq if b else res_alt
-
-    # Else call procedure:
-    proc = deterministic_eval(op, env)
-    c = [0] * len(args)
-    for (i, arg) in enumerate(args):
-        c[i] = deterministic_eval(arg, env)
-    return proc(c)
-
-
-def sample_from_priors(graph):
-    local_env = {}
-    graph_structure = graph[1]
-    nodes = graph_structure['V']
-    edges = graph_structure['A']
-    link_functions = graph_structure['P']
-
-    sorted_nodes = topologicalSort(nodes, edges)
-    for node in sorted_nodes:
-        value = probabilistic_eval(link_functions[node], {**core, **local_env})
-        local_env[node] = value
-
-    return local_env
-
-
-def probabilistic_eval(exp, env):
-    op, *args = exp
-    if op == 'sample*':
-        dist = deterministic_eval(args[0], env)
-        return dist.sample()
-    elif op == 'observe*':
-        _, observed = args
-        return deterministic_eval(observed, env)
-
-
-def generate_markov_blankets(nodes, observed, edges):
-
-    markov_blankets = {}
-
-    for node in nodes:
-        if node not in observed:
-            node_blanket = [node]
-            node_blanket.extend(edges[node])
-            markov_blankets[node] = node_blanket
-
-    return markov_blankets
-
-
-def mhgibbs(graph, num_samples):
+def mhgibbs_samples(graph, num_samples):
 
     nodes = graph[1]['V']
     link_functions = graph[1]['P']
@@ -88,6 +28,30 @@ def mhgibbs(graph, num_samples):
     return samples
 
 
+def mhgibbs_max_time(graph, max_time):
+
+    nodes = graph[1]['V']
+    link_functions = graph[1]['P']
+    edges = graph[1]['A']
+    observed = graph[1]['Y']
+
+    sampled = get_sampled(nodes, link_functions)
+    markov_blankets = generate_markov_blankets(nodes, observed, edges)
+
+    start = time.time()
+    samples = [sample_from_priors(graph)]
+    while True:
+        if time.time() - start > max_time:
+            break
+
+        sample = mhgibbs_step(link_functions, sampled, observed, samples[s], markov_blankets)
+        samples.append(sample)
+
+    result_nodes = graph[2]
+    samples = [deterministic_eval(result_nodes, {**core, **sample, **observed}) for sample in samples]
+    return samples
+
+
 def mhgibbs_step(link_functions, sampled, observed, last_sample, markov_blankets):
     sample = last_sample.copy()
     for rv in sampled:
@@ -101,15 +65,6 @@ def mhgibbs_step(link_functions, sampled, observed, last_sample, markov_blankets
             sample = proposed_sample
 
     return sample
-
-
-def get_sampled(nodes, link_functions):
-    sampled = []
-    for node in nodes:
-        if link_functions[node][0] == "sample*":
-            sampled.append(node)
-
-    return sampled
 
 
 def mhgibbs_acceptance(link_functions, rv, observed, proposed_sample, last_sample, markov_blanket):
