@@ -1,75 +1,44 @@
-import torch
-from matplotlib import pyplot as plt
-from scipy.stats import kstest, norm, beta, expon
+from daphne import daphne
+from benchmarking import run_benchmark
 
-import numpy as np
-import json
+labels = {
+    1: ["mu"],
+    2: ["slope", "bias"],
+    3: ["z[1] == z[2]"],
+    4: ["is-raining"],
+    5: ["x", "y"]
+}
 
-class normalmix():
-    
-    def __init__(self, *args):
-        
-        self.normals = []
-        self.wts = []
-        
-        for i in range(len(args)//3):
-            self.normals.append(norm(args[3*i+1],args[3*i+2]))
-            self.wts.append(args[3*i])
-            
-    def cdf(self, arg):
-        
-        cdf_vals = []
-        
-        for wt,normal in zip(self.wts,self.normals):
-            cdf_vals.append(wt*normal.cdf(arg))
-        return sum(cdf_vals)
-        
-        
-        
-def is_tol(a, b):
-    if type(a) == dict:
-        keys_match = (set(a) == set(b))
-        if keys_match:
-            for k,v in a.items(): #check all items
-                if not is_tol(v, b[k]): #recursively check if they match
-                    return False 
-            return True #return True if all items match
-        else:
-            return False #false if keys don't match
-    else:
-        return not torch.any(torch.logical_not(torch.abs((a - b)) < 1e-5))
+max_time = 10
+bins = [50, 50, 0, 0, 50]
 
 
+for i in range(4, 6):
 
+    # Importance Sampling
+    is_args = {
+        "labels": labels[i],
+        "evaluator": "ImportanceSampling",
+        "max_time": max_time,
+        "n_bins": bins[i-1],
+        "bool_res?": True if i in [3, 4] else False,
+        "program_name": f"Program{i}",
+        "use_weights?": True,
+        "ast": daphne(['desugar', '-i', f'../hw3/programs/{i}.daphne'])
+    }
+    # print(f"Starting Importance Sampling for Program {i}")
+    # run_benchmark(is_args)
 
-def run_prob_test(stream, truth, num_samples):
-    samples = []
-    for _ in range(int(num_samples)):
-        samples.append(next(stream))
-
-    samples = np.array(samples)
-    distrs = {
-            'normal' : norm,
-            'beta' : beta,
-            'exponential' : expon,
-            'normalmix' : normalmix,
-            }
-    
-    truth_dist = distrs[truth[0]](*truth[1:])
-
-    d,p_val = kstest(samples, truth_dist.cdf)
-    
-    return p_val
-    
-def load_truth(path): # sorry this is very hacky, and will break for anything complicated
-    with open(path) as f:            
-        truth = json.load(f)
-    if type(truth) is list:
-        if type(truth[0]) is str:
-            truth = tuple(truth)
-        else:
-            truth = torch.tensor(truth)
-    if type(truth) is dict:
-        truth = {float(k):v for k,v in truth.items()} ##TODO: this will NOT work for nested dicts
-    return truth
-
+    # MH in Gibbs
+    mh_args = {
+        "labels": labels[i],
+        "evaluator": "MHGibbs",
+        "max_time": max_time,
+        "n_bins": bins[i - 1],
+        "bool_res?": True if i in [3, 4] else False,
+        "program_name": f"Program{i}",
+        "use_weights?": False,
+        "graph": daphne(['graph', '-i', f'../hw3/programs/{i}.daphne'])
+    }
+    print(f"Starting MH in Gibbs for Program {i}")
+    run_benchmark(mh_args)

@@ -3,10 +3,10 @@ from tqdm.auto import tqdm
 import time
 
 from primitives import core
-from utils import topologicalSort, get_sampled, generate_markov_blankets, sample_from_priors, deterministic_eval
+from utils import get_sampled, generate_markov_blankets, sample_from_priors, deterministic_eval
 
 
-def mhgibbs_samples(graph, num_samples):
+def mhgibbs_num_samples(graph, num_samples):
 
     nodes = graph[1]['V']
     link_functions = graph[1]['P']
@@ -44,7 +44,7 @@ def mhgibbs_max_time(graph, max_time):
         if time.time() - start > max_time:
             break
 
-        sample = mhgibbs_step(link_functions, sampled, observed, samples[s], markov_blankets)
+        sample = mhgibbs_step(link_functions, sampled, observed, samples[-1], markov_blankets)
         samples.append(sample)
 
     result_nodes = graph[2]

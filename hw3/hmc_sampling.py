@@ -3,7 +3,7 @@ import torch.distributions as tdist
 from daphne import daphne
 
 from primitives import core
-from toposort import topologicalSort
+from utils import topologicalSort
 
 
 def hmc(graph, num_samples, num_leaps, epsilon, m):

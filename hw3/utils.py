@@ -1,3 +1,14 @@
+import numpy as np
+import torch
+from primitives import core
+
+
+def weighted_avg_and_var(values, weights):
+    average = np.average(values, weights=weights)
+    variance = np.average((values - average) ** 2, weights=weights)
+    return average, variance
+
+
 # Topologically sorts the graph
 def topologicalSort(vertices, edges):
     # Mark all the vertices as not visited
