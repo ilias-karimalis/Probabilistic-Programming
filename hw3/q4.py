@@ -4,10 +4,12 @@ import numpy as np
 import time
 
 import importance_sampling as isample
+from mh_gibbs_samping import mhgibbs
 
 # Q4
 
 # Importance Sampling:
+
 start = time.time()
 
 ast = daphne(['desugar', '-i', '../hw3/programs/4.daphne'])
@@ -37,6 +39,34 @@ prob_raining = weighted_samples[1] / sum(weighted_samples)
 
 print(f"probability of is-raining: {prob_raining}")
 posterior_ident = f"4.daphne_posterior_for_is-raining_using_importance_sampling"
+plt.bar(["True", "False"], [prob_raining, 1 - prob_raining])
+plt.title(posterior_ident)
+plt.savefig(f"plots/{posterior_ident}.png")
+plt.clf()
+
+elapsed = time.time() - start
+print(f"Seconds Elapsed: {elapsed}")
+
+
+# MH within Gibbs:
+print("MH within Gibbs Sampling:")
+start = time.time()
+
+graph = daphne(['graph', '-i', '../hw3/programs/4.daphne'])
+num_samples = int(1e5)
+
+samples = mhgibbs(graph, num_samples)
+results = [0, 0]
+for s in samples:
+    if s.numpy():
+        results[1] += 1
+    else:
+        results[0] += 1
+
+prob_raining = results[1] / sum(results)
+
+print(f"probability of is-raining: {prob_raining}")
+posterior_ident = f"3.daphne_posterior_is-raining_using_mhgibbs_sampling"
 plt.bar(["True", "False"], [prob_raining, 1 - prob_raining])
 plt.title(posterior_ident)
 plt.savefig(f"plots/{posterior_ident}.png")
