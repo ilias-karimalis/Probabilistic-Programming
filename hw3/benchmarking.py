@@ -6,7 +6,8 @@ from matplotlib import pyplot as plt
 
 from utils import weighted_avg_and_var
 import importance_sampling as isampling
-from mh_gibbs_samping import mhgibbs_max_time
+from mh_gibbs_samping import MHGibbsSampler
+from hmc_sampling import HMCSampler
 
 
 def run_benchmark(args):
@@ -16,7 +17,25 @@ def run_benchmark(args):
     n_bins = args["n_bins"]
 
     # Generate samples
-    samples, weights = generate_samples(args)
+    samples, weights, joint_logs = generate_samples(args)
+
+    if len(joint_logs) > 0:
+        plt.plot(joint_logs)
+        plt.title(f"Joint Log Trace using {evaluator}")
+        plt.xlabel("Iteration")
+        plt.savefig(f"plots/{program_name}_jlt_{evaluator}.png")
+        plt.clf()
+
+    if evaluator == "MHGibbs" or evaluator == "MHC":
+        plt.title(f"Sample Trace for {program_name}")
+        plt.xlabel("Iteration")
+        if samples.ndim == 1:
+            plt.plot(samples, label=labels[0])
+        elif samples.ndim == 2:
+            for (i, label) in enumerate(labels):
+                plt.plot(samples[:, i], label=labels[i])
+        plt.savefig(f"plots/{program_name}_sample_trace_{evaluator}.png")
+        plt.clf()
 
     # We can currently only handle a single boolean return value
     if args["bool_res?"]:
@@ -30,6 +49,7 @@ def run_benchmark(args):
         plt.clf()
         return
 
+
     # Handling numeric result values
     if samples.ndim == 1:
         average, variance = weighted_avg_and_var(samples, np.exp(weights))
@@ -39,10 +59,10 @@ def run_benchmark(args):
         plt.title(f"Posterior probability of {labels[0]} using {evaluator}")
         plt.savefig(f"plots/{program_name}_{labels[0]}_{evaluator}.png")
         plt.clf()
-        return
 
-    if samples.ndim == 2:
-        covar = np.cov(samples.T, aweights=np.exp(weights))
+
+    elif samples.ndim == 2:
+        covar = np.cov(samples.T, aweights=np.exp(weights), ddof=0)
         print(f"covariance: {covar}")
 
         for (j, label) in enumerate(labels):
@@ -53,9 +73,9 @@ def run_benchmark(args):
             plt.title(f"Posterior probability of {label} using {evaluator}")
             plt.savefig(f"plots/{program_name}_{label}_{evaluator}.png")
             plt.clf()
-        return
 
-    print(f"Plotting for results with {samples.ndim} dimensions is not yet supported.")
+    else:
+        print(f"Plotting for results with {samples.ndim} dimensions is not yet supported.")
 
 
 def generate_samples(args):
@@ -63,6 +83,7 @@ def generate_samples(args):
     max_time = args["max_time"]
     samples = []
     weights = []
+    joint_logs = []
     start = time.time()
 
     if evaluator == "ImportanceSampling":
@@ -74,22 +95,25 @@ def generate_samples(args):
             sample, weight = next(program_stream)
             samples.append(sample)
             weights.append(weight)
-        samples = np.array([s.numpy() for s in samples])
         weights = np.array(weights)
 
     elif evaluator == "MHGibbs":
-        graph = args["graph"]
-        samples = mhgibbs_max_time(graph, max_time)
-        samples = np.array([s.numpy() for s in samples])
+        mhgibbs_sampler = MHGibbsSampler(args)
+        samples, joint_logs = mhgibbs_sampler.run()
 
-
+    elif evaluator == "HMC":
+        hmc_sampler = HMCSampler(args)
+        samples, joint_logs = hmc_sampler.run()
+        if "burnin" in args.keys():
+            samples = samples[args["burnin"]:]
+        joint_logs = [jl.item() for jl in joint_logs]
     else:
         print(f"ERROR: {evaluator} processing not implemented")
 
-    # Probably a mistake
+    samples = np.array([s.numpy() for s in samples])
     weights_shape = samples.shape if samples.ndim == 1 else samples[:, 0].shape
     weights = np.array(weights) if args["use_weights?"] else np.zeros(weights_shape)
-    return samples, weights
+    return samples, weights, joint_logs
 
 
 def generate_boolean_samples(samples, weights):

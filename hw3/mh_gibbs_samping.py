@@ -1,86 +1,93 @@
 import torch
-from tqdm.auto import tqdm
+import torch.distributions as tdist
 import time
 
 from primitives import core
-from utils import get_sampled, generate_markov_blankets, sample_from_priors, deterministic_eval
+from utils import get_sampled, sample_from_priors, deterministic_eval
 
 
-def mhgibbs_num_samples(graph, num_samples):
+class MHGibbsSampler:
 
-    nodes = graph[1]['V']
-    link_functions = graph[1]['P']
-    edges = graph[1]['A']
-    observed = graph[1]['Y']
+    def __init__(self, args):
+        # Parse args
+        self.graph = args["graph"]
+        self.max_time = args["max_time"]
 
-    sampled = get_sampled(nodes, link_functions)
-    markov_blankets = generate_markov_blankets(nodes, observed, edges)
+        # Graph Processing
+        self.nodes = self.graph[1]['V']
+        self.link_functions = self.graph[1]['P']
+        self.edges = self.graph[1]['A']
+        self.observed = self.graph[1]['Y']
+        self.result_nodes = self.graph[2]
+        self.sampled = get_sampled(self.nodes, self.link_functions)
+        self.markov_blankets = self.__generate_markov_blankets()
 
-    samples = [sample_from_priors(graph)]
-    for s in tqdm(range(num_samples)):
-        sample = mhgibbs_step(link_functions, sampled, observed, samples[s], markov_blankets)
-        samples.append(sample)
+        # Misc
+        self.u_dist = tdist.uniform.Uniform(0, 1)
 
-    # Samples here is a list where each sample is a dictionary mapping of r.v. to value
-    # We should only return the ones needed for the result
-    result_nodes = graph[2]
-    samples = [deterministic_eval(result_nodes, {**core, **sample, **observed}) for sample in samples]
-    return samples
+    def run(self):
+        samples = []
+        log_joints = []
 
+        start = time.time()
 
-def mhgibbs_max_time(graph, max_time):
+        samples.append(sample_from_priors(self.graph))
 
-    nodes = graph[1]['V']
-    link_functions = graph[1]['P']
-    edges = graph[1]['A']
-    observed = graph[1]['Y']
+        while time.time() - start < self.max_time:
+            sample = self.__step(samples[-1])
+            samples.append(sample)
+            log_joints.append(self.__log_joint({**sample, **self.observed, **core}))
 
-    print(link_functions)
+        result_samples = [deterministic_eval(self.result_nodes, {**sample, **self.observed, **core}) for sample in samples]
+        return result_samples, log_joints
 
-    sampled = get_sampled(nodes, link_functions)
-    markov_blankets = generate_markov_blankets(nodes, observed, edges)
+    def __step(self, last_sample):
+        sample = last_sample.copy()
+        for rv in self.sampled:
+            # Draw Samples from Prior for proposal
+            dist = deterministic_eval(self.link_functions[rv][1], {**core, **last_sample})
+            proposed_sample = sample.copy()
+            proposed_sample[rv] = dist.sample()
+            u = self.u_dist.sample()
+            alpha = self.__acceptance(rv, proposed_sample, sample)
+            if u < alpha:
+                sample = proposed_sample
+        return sample
 
-    start = time.time()
-    samples = [sample_from_priors(graph)]
-    while True:
-        if time.time() - start > max_time:
-            break
+    def __acceptance(self, rv, proposed_sample, last_sample):
+        dist_new = deterministic_eval(self.link_functions[rv][1], {**core, **proposed_sample})
+        dist_last = deterministic_eval(self.link_functions[rv][1], {**core, **last_sample})
+        log_alpha = dist_new.log_prob(last_sample[rv]) - dist_last.log_prob(proposed_sample[rv])
+        for node in self.markov_blankets[rv]:
+            log_alpha += deterministic_eval(
+                self.link_functions[node][1],
+                {**core, **self.observed, **proposed_sample}
+            ).log_prob(proposed_sample[node])
+            log_alpha -= deterministic_eval(
+                self.link_functions[node][1],
+                {**core, **self.observed, **last_sample}
+            ).log_prob(last_sample[node])
 
-        sample = mhgibbs_step(link_functions, sampled, observed, samples[-1], markov_blankets)
-        samples.append(sample)
+        return torch.exp(log_alpha)
 
-    result_nodes = graph[2]
-    samples = [deterministic_eval(result_nodes, {**core, **sample, **observed}) for sample in samples]
-    return samples
+    def __generate_markov_blankets(self):
+        markov_blankets = {}
 
+        for node in self.nodes:
+            if node not in self.observed:
+                node_blanket = [node]
+                node_blanket.extend(self.edges[node])
+                markov_blankets[node] = node_blanket
 
-def mhgibbs_step(link_functions, sampled, observed, last_sample, markov_blankets):
-    sample = last_sample.copy()
-    for rv in sampled:
-        # Draw Samples from Prior for proposal
-        dist = deterministic_eval(link_functions[rv][1], {**core, **last_sample})
-        proposed_sample = sample.copy()
-        proposed_sample[rv] = dist.sample()
-        u = torch.rand(1)
-        alpha = mhgibbs_acceptance(link_functions, rv, observed, proposed_sample, sample, markov_blankets[rv])
-        if u < alpha:
-            sample = proposed_sample
+        return markov_blankets
 
-    return sample
+    def __log_joint(self, env):
+        ret = torch.tensor(0.0)
+        for node in self.nodes:
+            dist = deterministic_eval(self.link_functions[node][1], env)
+            val = env[node]
+            if type(val) in [int, float, bool]:
+                val = torch.tensor(float(val))
+            ret += dist.log_prob(val)
 
-
-def mhgibbs_acceptance(link_functions, rv, observed, proposed_sample, last_sample, markov_blanket):
-    dist_new = deterministic_eval(link_functions[rv][1], {**core, **proposed_sample})
-    dist_last = deterministic_eval(link_functions[rv][1], {**core, **last_sample})
-    log_alpha = dist_new.log_prob(last_sample[rv]) - dist_last.log_prob(proposed_sample[rv])
-    for node in markov_blanket:
-        log_alpha += deterministic_eval(
-            link_functions[node][1],
-            {**core, **observed, **proposed_sample}
-        ).log_prob(proposed_sample[node])
-        log_alpha -= deterministic_eval(
-            link_functions[node][1],
-            {**core, **observed, **last_sample}
-        ).log_prob(last_sample[node])
-
-    return torch.exp(log_alpha)
+        return ret

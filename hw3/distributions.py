@@ -74,6 +74,19 @@ class Bernoulli(Distribution):
         self.p = args[0]
         super().__init__(tdist.bernoulli.Bernoulli(self.p))
 
+# This seems kind of stupid but, I think we can treat the Dirac
+# distribution as how it's mathematically defined (a limit of
+# Normal distributions with var -> 0). We can thus define the Dirac
+# as a distribution which always samples it's mean and has a very small
+# variance (1e-2) <- This choice of variance is kind of random but,
+# I'm unsure how to pick a better one...
 class Dirac(Distribution):
     def __init__(self, args):
-        pass
+        assert (len(args) == 1)
+        self.mean = args[0]
+        self.covariance = torch.tensor(1e-2)
+        super().__init__(tdist.normal.Normal(self.mean, self.covariance))
+
+    def sample(self):
+        return self.mean
+

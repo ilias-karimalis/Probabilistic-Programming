@@ -1,3 +1,4 @@
+
 import numpy as np
 import torch
 from primitives import core
@@ -48,14 +49,14 @@ def topologicalSort(vertices, edges):
 
 
 def deterministic_eval(exp, env):
-    if type(exp) in [int, float]:
+    if type(exp) in [int, float, bool]:
         return torch.tensor(float(exp))
-
-    if type(exp) == bool:
-        return exp
 
     elif type(exp) == str:
         return env[exp]
+
+    elif exp is None:
+        return 0
 
     op, *args = exp
     if op == 'if':
@@ -96,19 +97,6 @@ def probabilistic_eval(exp, env):
     elif op == 'observe*':
         _, observed = args
         return deterministic_eval(observed, env)
-
-
-def generate_markov_blankets(nodes, observed, edges):
-
-    markov_blankets = {}
-
-    for node in nodes:
-        if node not in observed:
-            node_blanket = [node]
-            node_blanket.extend(edges[node])
-            markov_blankets[node] = node_blanket
-
-    return markov_blankets
 
 
 def get_sampled(nodes, link_functions):
