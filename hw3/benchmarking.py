@@ -26,7 +26,7 @@ def run_benchmark(args):
         plt.savefig(f"plots/{program_name}_jlt_{evaluator}.png")
         plt.clf()
 
-    if evaluator == "MHGibbs" or evaluator == "MHC":
+    if evaluator == "MHGibbs" or evaluator == "HMC":
         plt.title(f"Sample Trace for {program_name}")
         plt.xlabel("Iteration")
         if samples.ndim == 1:
