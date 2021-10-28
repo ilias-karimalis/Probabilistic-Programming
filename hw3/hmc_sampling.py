@@ -28,46 +28,33 @@ class HMCSampler:
         m_matrix = torch.eye(len(self.sampled))
         momentum_dist = tdist.multivariate_normal.MultivariateNormal(zero_vec, m_matrix)
         u_dist = tdist.uniform.Uniform(0, 1)
-
         samples = []
         log_joints = []
-
         # Start Timer
         start = time.time()
-
         prior_samples = sample_from_priors(self.graph)
         sample = torch.tensor([prior_samples[key] for key in prior_samples if key in self.sampled])
-
         while time.time() - start < self.max_time:
             momentum = momentum_dist.sample()
             sample_new, momentum_new = self.__leapfrog(sample, momentum)
             u = u_dist.sample()
             acceptance_rate = self.__acceptance_rate(sample, sample_new, momentum, momentum_new, m_matrix)
-
             if u < acceptance_rate:
                 env = {**dict(zip(self.sampled, sample_new)), **self.observed}
                 samples.append(deterministic_eval(self.result_nodes, env).detach())
                 log_joints.append(self.__log_joint(env).detach())
                 sample = sample_new
-
             else:
                 env = {**dict(zip(self.sampled, sample)), **self.observed}
                 samples.append(deterministic_eval(self.result_nodes, env).detach())
                 log_joints.append(self.__log_joint(env).detach())
-
         return samples, log_joints
 
     def __leapfrog(self, sample, momentum):
         sample = sample.detach().clone()
         momentum = momentum - 0.5 * self.epsilon * self.__nabla_u(sample)
         for _ in range(self.num_leaps - 1):
-            # sample = sample.detach() - self.epsilon * momentum
-            # momentum = momentum - self.epsilon * self.__nabla_u(sample)
             sample, momentum = self.__leapfrog_step(sample, momentum)
-
-        # sample = sample.detach() + self.epsilon * momentum
-        # momentum = momentum - 0.5 * self.epsilon * self.__nabla_u(sample)
-        # return sample, momentum
         return self.__leapfrog_step(sample, momentum, half_step=True)
 
     def __leapfrog_step(self, sample, momentum, half_step=False):
@@ -108,7 +95,6 @@ class HMCSampler:
             if type(val) in [int, float, bool]:
                 val = torch.tensor(float(val))
             ret += dist.log_prob(val)
-
         return ret
 
 

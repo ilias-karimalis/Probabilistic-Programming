@@ -11,9 +11,9 @@ labels = {
 
 max_time = 600
 bins = [50, 50, 0, 0, 50]
-burnin = [3000, 0, 0, 0, 3000]
-num_leaps = [30, 30, 0, 0, 30]
-epsilon = [0.1, 0.1, 0, 0, 0.1]
+burnin = [3000, 3000, 0, 0, 3000]
+num_leaps = [30, 20, 0, 0, 20]
+epsilon = [0.1, 0.1, 0, 0, 0.001]
 
 
 for i in range(1, 6):
