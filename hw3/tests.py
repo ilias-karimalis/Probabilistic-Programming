@@ -9,14 +9,14 @@ labels = {
     5: ["x", "y"]
 }
 
-max_time = 6
+max_time = 600
 bins = [50, 50, 0, 0, 50]
-burnin = [3000, 3000, 0, 0, 3000]
+burnin = [3000, 3000, 3000, 3000, 3000]
 num_leaps = [30, 20, 0, 0, 20]
 epsilon = [0.1, 0.1, 0, 0, 0.001]
 
 
-for i in range(1, 6):
+for i in range(3, 5):
 
     # Importance Sampling
     # print(f"Starting Importance Sampling for Program {i}")

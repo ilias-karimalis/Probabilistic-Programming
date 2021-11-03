@@ -39,9 +39,8 @@ def run_benchmark(args):
 
     # We can currently only handle a single boolean return value
     if args["bool_res?"]:
-        samples = generate_boolean_samples(samples, weights)
-        prob = samples[1] / sum(samples)
-
+        # samples = generate_boolean_samples(samples, weights)
+        prob = np.average(np.array([float(s) for s in samples]), weights=np.exp(weights))
         print(f"Posterior probability of {labels[0]}: {prob}")
         plt.bar(["True", "False"], [prob, 1 - prob])
         plt.title(f"Posterior probability of {labels[0]} using {evaluator}")
@@ -100,6 +99,8 @@ def generate_samples(args):
     elif evaluator == "MHGibbs":
         mhgibbs_sampler = MHGibbsSampler(args)
         samples, joint_logs = mhgibbs_sampler.run()
+        if "burnin" in args.keys():
+            samples = samples[args["burnin"]:]
 
     elif evaluator == "HMC":
         hmc_sampler = HMCSampler(args)

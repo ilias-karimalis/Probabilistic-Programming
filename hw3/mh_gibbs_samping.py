@@ -70,34 +70,15 @@ class MHGibbsSampler:
 
         return torch.exp(log_alpha)
 
-    # Stolen from Alan Milligan
     def __generate_markov_blankets(self):
-        
-        for node in self.nodes:
-            if node not in self.edges.keys():
-                self.edges[node] = []
-
-        # Adds Children of nodes to the Markov Blanket
-        markov_blankets = {node: [child for child in self.edges[node]] for node in self.nodes}
-
-        # Adds Parents
-        for node in self.nodes:
-            for child in self.edges[node]:
-                if node not in markov_blankets[child]:
-                    markov_blankets[node].append(node)
-
-        # Add Parents of Children
-        for node in self.nodes:
-            for child in self.edges[node]:
-                for new_node in self.nodes:
-                    if node is not new_node and child in self.edges[new_node] and new_node not in markov_blankets[node]:
-                        markov_blankets[node].append(new_node)
-                # # Self
-                # node_blanket = [node]
-                # # Parents
-                # node_blanket.extend(self.edges[node])
-                # markov_blankets[node] = node_blanket
-
+        # for node in self.nodes:
+        #     if node not in self.edges.keys():
+        #         self.edges[node] = []
+        markov_blankets = {}
+        for node in self.sampled:
+            node_blanket = [node]
+            node_blanket.extend(self.edges[node])
+            markov_blankets[node] = node_blanket
         return markov_blankets
 
     def __log_joint(self, env):
