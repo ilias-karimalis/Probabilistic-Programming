@@ -44,6 +44,8 @@ class LWSampler:
             samples.append(sample)
             weights.append(sigma_new['logW'])
 
+        wandb.finish()
+
         return samples, weights
 
     def __parse_user_functions(self):
