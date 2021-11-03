@@ -5,7 +5,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from utils import weighted_avg_and_var
-import importance_sampling as isampling
+from importance_sampling import LWSampler
 from mh_gibbs_samping import MHGibbsSampler
 from hmc_sampling import HMCSampler
 
@@ -48,7 +48,6 @@ def run_benchmark(args):
         plt.clf()
         return
 
-
     # Handling numeric result values
     if samples.ndim == 1:
         average, variance = weighted_avg_and_var(samples, np.exp(weights))
@@ -58,7 +57,6 @@ def run_benchmark(args):
         plt.title(f"Posterior probability of {labels[0]} using {evaluator}")
         plt.savefig(f"plots/{program_name}_{labels[0]}_{evaluator}.png")
         plt.clf()
-
 
     elif samples.ndim == 2:
         covar = np.cov(samples.T, aweights=np.exp(weights), ddof=0)
@@ -79,22 +77,13 @@ def run_benchmark(args):
 
 def generate_samples(args):
     evaluator = args["evaluator"]
-    max_time = args["max_time"]
     samples = []
     weights = []
     joint_logs = []
-    start = time.time()
 
     if evaluator == "ImportanceSampling":
-        ast = args["ast"]
-        program_stream = isampling.get_stream(ast)
-        while True:
-            if time.time() - start > max_time:
-                break
-            sample, weight = next(program_stream)
-            samples.append(sample)
-            weights.append(weight)
-        weights = np.array(weights)
+        lw_sampler = LWSampler(args)
+        samples, weights = lw_sampler.run()
 
     elif evaluator == "MHGibbs":
         mhgibbs_sampler = MHGibbsSampler(args)
@@ -108,6 +97,7 @@ def generate_samples(args):
         if "burnin" in args.keys():
             samples = samples[args["burnin"]:]
         joint_logs = [jl.item() for jl in joint_logs]
+
     else:
         print(f"ERROR: {evaluator} processing not implemented")
 
