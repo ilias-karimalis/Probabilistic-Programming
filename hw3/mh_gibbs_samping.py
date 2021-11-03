@@ -71,14 +71,14 @@ class MHGibbsSampler:
         return torch.exp(log_alpha)
 
     def __generate_markov_blankets(self):
+        # for node in self.nodes:
+        #     if node not in self.edges.keys():
+        #         self.edges[node] = []
         markov_blankets = {}
-
-        for node in self.nodes:
-            if node not in self.observed:
-                node_blanket = [node]
-                node_blanket.extend(self.edges[node])
-                markov_blankets[node] = node_blanket
-
+        for node in self.sampled:
+            node_blanket = [node]
+            node_blanket.extend(self.edges[node])
+            markov_blankets[node] = node_blanket
         return markov_blankets
 
     def __log_joint(self, env):
