@@ -1,6 +1,6 @@
 import torch
-from distributions import Normal, Beta, Exponential, UniformContinuous, Categorical, Distribution, Gamma, Dirichlet, \
-    Bernoulli, Dirac
+from distributions import Normal, Categorical, Gamma, Dirichlet, \
+    Bernoulli
 
 # These could all be made more strict by requiring that each operation receive
 # a list of arguments of the correct length !!!
@@ -41,15 +41,11 @@ core = {
     'append': lambda args: primitive_append(args),
 
     # Distributions
-    'normal': lambda args: Normal(args),
-    'beta': lambda args: Beta(args),
-    'exponential': lambda args: Exponential(args),
-    'uniform': lambda args: UniformContinuous(args),
-    'discrete': lambda args: Categorical(args),
-    'gamma': lambda args: Gamma(args),
-    'dirichlet': lambda args: Dirichlet(args),
-    'flip': lambda args: Bernoulli(args),
-    'dirac': lambda args: Dirac(args)
+    'normal': lambda args: Normal(args[0], args[1]),
+    'discrete': lambda args: Categorical(args[0]),
+    'gamma': lambda args: Gamma(args[0], args[1]),
+    'dirichlet': lambda args: Dirichlet(args[0]),
+    'flip': lambda args: Bernoulli(args[0]),
 
 }
 

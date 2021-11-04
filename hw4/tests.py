@@ -9,28 +9,44 @@ labels = {
     5: ["x", "y"]
 }
 
-max_time = 600
+max_time = 3600
 bins = [50, 50, 0, 0, 50]
 burnin = [3000, 3000, 0, 0, 3000]
 num_leaps = [30, 20, 0, 0, 20]
 epsilon = [0.1, 0.1, 0, 0, 0.001]
 
 
-for i in range(1, 6):
+for i in range(1, 2):
 
-    # Importance Sampling
-    print(f"Starting Importance Sampling for Program {i}")
+    # BBVI Sampling
+    print(f"Starting BBVI Sampling for Program {i}")
     is_args = {
         "labels": labels[i],
-        "evaluator": "ImportanceSampling",
+        "evaluator": "BBVISampling",
         "max_time": max_time,
-        "n_bins": bins[i-1],
+        "n_bins": bins[i - 1],
         "bool_res?": True if i in [3, 4] else False,
         "program_name": f"Program{i}",
-        "use_weights?": True,
-        "ast": daphne(['desugar', '-i', f'../hw3/programs/{i}.daphne'])
+        "use_weights?": False,
+        "graph": daphne(['graph', '-i', f'../hw4/programs/{i}.daphne']),
+        "learning_rate": 0.05,
+        "batch_size": 100,
     }
     run_benchmark(is_args)
+
+    # # Importance Sampling
+    # print(f"Starting Importance Sampling for Program {i}")
+    # is_args = {
+    #     "labels": labels[i],
+    #     "evaluator": "ImportanceSampling",
+    #     "max_time": max_time,
+    #     "n_bins": bins[i-1],
+    #     "bool_res?": True if i in [3, 4] else False,
+    #     "program_name": f"Program{i}",
+    #     "use_weights?": True,
+    #     "ast": daphne(['desugar', '-i', f'../hw3/programs/{i}.daphne'])
+    # }
+    # run_benchmark(is_args)
 
     # # MH in Gibbs
     # print(f"Starting MH in Gibbs for Program {i}")
