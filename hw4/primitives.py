@@ -1,6 +1,6 @@
 import torch
 from distributions import Normal, Categorical, Gamma, Dirichlet, \
-    Bernoulli
+    Bernoulli, Uniform
 
 # These could all be made more strict by requiring that each operation receive
 # a list of arguments of the correct length !!!
@@ -13,6 +13,7 @@ core = {
     '*': lambda args: args[0] * args[1],
     '/': lambda args: args[0] / args[1],
     'sqrt': lambda args: args[0] ** 0.5,
+    'abs': lambda args: abs(args[0]),
 
     # Matrix Functions
     'mat-mul': lambda args: torch.matmul(args[0], args[1]),
@@ -46,17 +47,23 @@ core = {
     'gamma': lambda args: Gamma(args[0], args[1]),
     'dirichlet': lambda args: Dirichlet(args[0]),
     'flip': lambda args: Bernoulli(args[0]),
+    'uniform-continuous': lambda args: Gamma((args[0] + args[1]) / 2, torch.tensor(1.0)),
+    #Uniform(args[0], args[1])
 
 }
 
 
 def primitive_list(args):
-    if isinstance(args[0], Distribution):
-        return args
     try:
         return torch.stack(args)
-    except RuntimeError:
-        return torch.hstack(args)
+    except:
+        return args
+    # if isinstance(args[0], torch.distributions.Distribution):
+    #     return args
+    # try:
+    #     return torch.stack(args)
+    # except RuntimeError:
+    #     return torch.hstack(args)
 
 
 def primitive_get(args):

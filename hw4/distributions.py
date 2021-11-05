@@ -4,12 +4,15 @@ import torch.distributions as dist
 
 class Normal(dist.Normal):
 
-    def __init__(self, loc, scale):
+    def __init__(self, loc, scale, copy=False):
 
-        if scale > 20.:
-            self.optim_scale = scale.clone().detach().requires_grad_()
+        if not copy:
+            if scale > 20.:
+                self.optim_scale = scale.clone().detach().requires_grad_()
+            else:
+                self.optim_scale = torch.log(torch.exp(scale) - 1).clone().detach().requires_grad_()
         else:
-            self.optim_scale = torch.log(torch.exp(scale) - 1).clone().detach().requires_grad_()
+            self.optim_scale = scale
 
         super().__init__(loc, torch.nn.functional.softplus(self.optim_scale))
 
@@ -24,11 +27,40 @@ class Normal(dist.Normal):
 
         ps = [p.clone().detach().requires_grad_() for p in self.Parameters()]
 
-        return Normal(*ps)
+        return Normal(*ps, copy=True)
 
     def log_prob(self, x):
 
         self.scale = torch.nn.functional.softplus(self.optim_scale)
+
+        return super().log_prob(x)
+
+
+class Uniform(dist.Uniform):
+
+    def __init__(self, lower, upper):
+        if upper - lower < 0.1:  # This seems like a bad idea
+            upper = lower + 1.0
+        self.num_samples = torch.tensor(0.0)
+        super().__init__(lower, upper)
+
+    def Parameters(self):
+        return [self.low, self.high]
+
+    def make_copy_with_grads(self):
+        ps = [p.clone().detach().requires_grad_() for p in self.Parameters()]
+
+        return Uniform(*ps)
+
+    def sample(self, sample_shape=torch.Size()):
+        self.num_samples += 1
+        return super().sample(sample_shape=sample_shape)
+
+    def log_prob(self, x):
+        # We can transform the upper bound to be the expected value of this Uniform if it had an unknown upper bound
+        # Following: https://stats.stackexchange.com/questions/125323/estimating-the-upper-bound-on-a-uniform-distribution-from-max-order-statistic
+        if x > self.high:
+            self.high = x + (self.high + 1) / self.high
 
         return super().log_prob(x)
 
