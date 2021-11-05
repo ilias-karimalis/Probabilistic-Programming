@@ -64,11 +64,12 @@ class BBVISampler:
                 res, sigma = self.__evaluate(sigma)
 
                 samples_batch.append(res)
-                # print(f"Sigma: {sigma}")
                 weights_batch.append(sigma["logW"])
                 weights_grad_batch.append(sigma["G"])
                 self.optim.zero_grad()
 
+            # TODO: Not sure if this is needed anymore but, this is useful in avoiding
+            # exploding ELBO which seemed to happen sometimes...
             elbo = torch.mean(torch.tensor(weights_batch)).item()
             if elbo < -1e8:
                 continue
@@ -80,9 +81,7 @@ class BBVISampler:
 
             elbo = torch.mean(torch.tensor(weights_batch)).item()
             if elbo > ELBO_max:
-                # print(f"Q_max old: {Q_max}")
                 Q_max = self.vi_dists.copy()
-                # print(f"Q_max new: {Q_max}")
             if self.use_wandb:
                 wandb.log({
                     'ELBO': elbo,
