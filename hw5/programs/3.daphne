@@ -16,6 +16,6 @@
           (let [state (sample (get trans-dists
                                    (peek states)))]
             (observe (get obs-dists state) obs)
-            (conj states state)))
+            (cons states state)))
         [(sample init-dist)]
         observations))

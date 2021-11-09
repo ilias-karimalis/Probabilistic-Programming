@@ -1,5 +1,6 @@
 import torch
 from scipy.stats import kstest, norm, beta, expon
+from pyrsistent import PMap
 
 import numpy as np
 import json
@@ -26,7 +27,7 @@ class normalmix():
         
         
 def is_tol(a, b):
-    if type(a) == dict:
+    if type(a) == PMap:
         keys_match = (set(a) == set(b))
         if keys_match:
             for k,v in a.items(): #check all items
