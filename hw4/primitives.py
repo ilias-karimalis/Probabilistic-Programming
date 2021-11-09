@@ -58,12 +58,6 @@ def primitive_list(args):
         return torch.stack(args)
     except:
         return args
-    # if isinstance(args[0], torch.distributions.Distribution):
-    #     return args
-    # try:
-    #     return torch.stack(args)
-    # except RuntimeError:
-    #     return torch.hstack(args)
 
 
 def primitive_get(args):
