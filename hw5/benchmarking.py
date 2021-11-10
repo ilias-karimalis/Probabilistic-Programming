@@ -26,7 +26,7 @@ def run_benchmark(args):
     samples, weights, joint_logs = generate_samples(args)
 
     # Create Results file
-    res_file = open(f"results/{program_name}_{evaluator}_output.txt", "a")
+    res_file = open(f"results/{program_name}_{evaluator}_output.txt", "w")
 
     if len(joint_logs) > 0:
         plt.plot(joint_logs)
