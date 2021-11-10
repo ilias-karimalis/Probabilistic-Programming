@@ -5,7 +5,8 @@ from pyrsistent import PMap
 import numpy as np
 import json
 
-class normalmix():
+
+class NormalMix:
     
     def __init__(self, *args):
         
@@ -24,8 +25,7 @@ class normalmix():
             cdf_vals.append(wt*normal.cdf(arg))
         return sum(cdf_vals)
         
-        
-        
+
 def is_tol(a, b):
     if type(a) == PMap:
         keys_match = (set(a) == set(b))
@@ -40,27 +40,19 @@ def is_tol(a, b):
         return not torch.any(torch.logical_not(torch.abs((a - b)) < 1e-5))
 
 
-
-
-def run_prob_test(stream, truth, num_samples):
-    samples = []
-    for i in range(int(num_samples)):
-        samples.append(next(stream))
-    
+def run_prob_test(samples, truth):
     distrs = {
             'normal' : norm,
             'beta' : beta,
             'exponential' : expon,
-            'normalmix' : normalmix,
+            'normalmix' : NormalMix,
             }
-    
-    print(truth)
     truth_dist = distrs[truth[0]](*truth[1:])
-
     d,p_val = kstest(np.array(samples), truth_dist.cdf)
     
     return p_val
-    
+
+
 def load_truth(path): # sorry this is very hacky, and will break for anything complicated
     with open(path) as f:            
         truth = json.load(f)

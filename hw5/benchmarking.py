@@ -1,10 +1,14 @@
 # args dict with potential keys:
 # labels, evaluator, program_name, n_bins, bool_res?, max_time, ast, graph, use_weights
-import time
+import sys
+import threading
+
 import numpy as np
 from matplotlib import pyplot as plt
 
-from hoppl_eval import get_stream
+import hoppl_eval
+from daphne import daphne
+
 
 def weighted_avg_and_var(values, weights):
     average = np.average(values, weights=weights)
@@ -20,6 +24,9 @@ def run_benchmark(args):
 
     # Generate samples
     samples, weights, joint_logs = generate_samples(args)
+
+    # Create Results file
+    res_file = open(f"results/{program_name}_{evaluator}_output.txt", "a")
 
     if len(joint_logs) > 0:
         plt.plot(joint_logs)
@@ -43,7 +50,7 @@ def run_benchmark(args):
     if args["bool_res?"]:
         # samples = generate_boolean_samples(samples, weights)
         prob = np.average(np.array([float(s) for s in samples]), weights=np.exp(weights))
-        print(f"Posterior probability of {labels[0]}: {prob}")
+        print(f"Posterior probability of {labels[0]}: {prob}", file=res_file)
         plt.bar(["True", "False"], [prob, 1 - prob])
         plt.title(f"Posterior probability of {labels[0]} using {evaluator}")
         plt.savefig(f"plots/{program_name}_{labels[0]}_{evaluator}.png")
@@ -53,8 +60,8 @@ def run_benchmark(args):
     # Handling numeric result values
     if samples.ndim == 1:
         average, variance = weighted_avg_and_var(samples, np.exp(weights))
-        print(f"{labels[0]} mean: {average}")
-        print(f"{labels[0]} variance: {variance}")
+        print(f"{labels[0]} mean: {average}", file=res_file)
+        print(f"{labels[0]} variance: {variance}", file=res_file)
         plt.hist(samples, bins=n_bins, weights=np.exp(weights))
         plt.title(f"Posterior probability of {labels[0]} using {evaluator}")
         plt.savefig(f"plots/{program_name}_{labels[0]}_{evaluator}.png")
@@ -62,12 +69,12 @@ def run_benchmark(args):
 
     elif samples.ndim == 2:
         covar = np.cov(samples.T, aweights=np.exp(weights), ddof=0)
-        print(f"covariance: {covar}")
+        print(f"covariance: {covar}", file=res_file)
 
         for (j, label) in enumerate(labels):
             average, variance = weighted_avg_and_var(samples[:, j], np.exp(weights))
-            print(f"{label} mean: {average}")
-            print(f"{label} variance: {variance}")
+            print(f"{label} mean: {average}", file=res_file)
+            print(f"{label} variance: {variance}", file=res_file)
             plt.hist(samples[:, j], bins=n_bins, weights=np.exp(weights))
             plt.title(f"Posterior probability of {label} using {evaluator}")
             plt.savefig(f"plots/{program_name}_{label}_{evaluator}.png")
@@ -83,22 +90,10 @@ def generate_samples(args):
     weights = []
     joint_logs = []
 
-    if evaluator == "ImportanceSampling":
-        lw_sampler = LWSampler(args)
-        samples, weights = lw_sampler.run()
-
-    elif evaluator == "MHGibbs":
-        mhgibbs_sampler = MHGibbsSampler(args)
-        samples, joint_logs = mhgibbs_sampler.run()
-        if "burnin" in args.keys():
-            samples = samples[args["burnin"]:]
-
-    elif evaluator == "HMC":
-        hmc_sampler = HMCSampler(args)
-        samples, joint_logs = hmc_sampler.run()
-        if "burnin" in args.keys():
-            samples = samples[args["burnin"]:]
-        joint_logs = [jl.item() for jl in joint_logs]
+    if evaluator == "HOPPLSampler":
+        hoppl_sampler = hoppl_eval.HOPPLSampler(args)
+        samples = hoppl_sampler.run()
+        pass
 
     else:
         print(f"ERROR: {evaluator} processing not implemented")
@@ -109,21 +104,34 @@ def generate_samples(args):
     return samples, weights, joint_logs
 
 
-def generate_boolean_samples(samples, weights):
-    samples_res = [0, 0]
-    weights_res = [0, 0]
+def main():
+    max_time = 1800
+    labels = {
+        1: ["geometric"],
+        2: ["mu"],
+        3: [str(i) for i in range(17)],
+    }
+    for i in range(1, 4):
+        print(f"Running Daphne for Program {i}")
+        args = {
+            "labels": labels[i],
+            "evaluator": "HOPPLSampler",
+            "max_time": max_time,
+            "n_bins": 50,
+            "bool_res?": False,
+            "program_name": f"Program{i}",
+            "use_weights?": False,
+            "ast": daphne(['desugar-hoppl', '-i', '../hw5/programs/{}.daphne'.format(i)])
+        }
+        print(f"Starting Inference for Program {i}")
+        run_benchmark(args)
 
-    for (s, w) in zip(samples, weights):
-        if s:
-            samples_res[1] += 1
-            weights_res[1] += np.exp(w)
-        else:
-            samples_res[0] += 1
-            weights_res[0] += np.exp(w)
 
-    weight_sum = np.sum(weights_res)
-    weighted_samples = [0, 0]
-    weighted_samples[0] = samples_res[0] * weights_res[0] / weight_sum
-    weighted_samples[1] = samples_res[1] * weights_res[1] / weight_sum
-
-    return weighted_samples
+if __name__ == '__main__':
+    sys.setrecursionlimit(100000)
+    # threading.stack_size(200000)
+    # thread = threading.Thread(target=main)
+    # thread.start()
+    hoppl_eval.run_deterministic_tests()
+    hoppl_eval.run_probabilistic_tests()
+    main()

@@ -14,6 +14,15 @@ class Env(dict):
         return self if (var in self) else self.outer.find(var)
 
 
+class Procedure(object):
+
+    def __init__(self, parms, body, env):
+        self.parms, self.body, self.env = parms, body, env
+
+    def __call__(self, eval_func, *args):
+        return eval_func(self.body, Env(parms=self.parms, args=args, outer=self.env))
+
+
 def standard_env():
     env = Env()
     env.update({
