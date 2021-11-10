@@ -1,0 +1,2 @@
+geometric mean: 99.08381529422564
+geometric variance: 9923.929321210646
