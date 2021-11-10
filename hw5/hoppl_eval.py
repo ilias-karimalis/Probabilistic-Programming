@@ -20,7 +20,7 @@ Atom = (int, float, bool)  # A Lisp Number is implemented as a Python int or flo
 class HOPPLSampler:
 
     def __init__(self, args):
-        self.ast = [args["ast"], '""']
+        self.ast = args["ast"]
         self.max_time = args["max_time"] if "max_time" in args.keys() else 0
 
     def run(self):
@@ -28,21 +28,21 @@ class HOPPLSampler:
         samples = []
         start = time.time()
         while time.time() - start < self.max_time:
-            samples.append(self.__evaluate(self.ast, global_env))
+            samples.append(self.__evaluate(self.ast, global_env)(self.__evaluate, 'start_address'))
         return samples
 
     def run_itter(self):
         global_env = standard_env()
-        return self.__evaluate(self.ast, global_env)
+        return self.__evaluate(self.ast, global_env)(self.__evaluate, 'start_address')
 
     def __evaluate(self, x, env):
         if isinstance(x, Atom):
             return torch.tensor(float(x))
         if isinstance(x, Symbol):
-            try:
-                return env.find(x)[x]
-            except:  # This is Hacky!!!
-                return x
+            dict = env.find(x)
+            if dict is not None:
+                return dict[x]
+            return x
 
         op, *args = x
         if op == 'if':

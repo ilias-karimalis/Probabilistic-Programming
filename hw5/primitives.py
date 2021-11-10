@@ -10,8 +10,11 @@ class Env(dict):
         self.outer = outer
 
     def find(self, var):
-        "Find the innermost Env where var appears."
-        return self if (var in self) else self.outer.find(var)
+        if var in self:
+            return self
+        if self.outer is not None:
+            return self.outer.find(var)
+        return None
 
 
 class Procedure(object):
