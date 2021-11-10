@@ -71,7 +71,7 @@ def generate_samples(args):
 
 
 def main():
-    max_time = 60
+    max_time = 1800
     labels = {
         1: ["geometric"],
         2: ["mu"],
@@ -95,9 +95,6 @@ def main():
 
 if __name__ == '__main__':
     sys.setrecursionlimit(100000)
-    # threading.stack_size(200000)
-    # thread = threading.Thread(target=main)
-    # thread.start()
     hoppl_eval.run_deterministic_tests()
     hoppl_eval.run_probabilistic_tests()
     main()
