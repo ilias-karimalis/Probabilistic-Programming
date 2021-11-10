@@ -109,7 +109,7 @@ def main():
     labels = {
         1: ["geometric"],
         2: ["mu"],
-        3: [str(i) for i in range(17)],
+        3: [f"data_point_{i}" for i in range(17)],
     }
     for i in range(1, 4):
         print(f"Running Daphne for Program {i}")
