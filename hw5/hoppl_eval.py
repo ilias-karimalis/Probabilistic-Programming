@@ -105,8 +105,8 @@ def run_probabilistic_tests():
 
         p_val = run_prob_test(samples, truth)
 
-        print('p value', p_val)
         assert (p_val > max_p_value)
+        print(f"HOPPL Probabilistic Test {i} passed")
 
     print('All probabilistic tests passed')
 

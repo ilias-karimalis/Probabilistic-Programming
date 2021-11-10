@@ -1,7 +1,4 @@
-# args dict with potential keys:
-# labels, evaluator, program_name, n_bins, bool_res?, max_time, ast, graph, use_weights
 import sys
-import threading
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -28,36 +25,6 @@ def run_benchmark(args):
     # Create Results file
     res_file = open(f"results/{program_name}_{evaluator}_output.txt", "w")
 
-    if len(joint_logs) > 0:
-        plt.plot(joint_logs)
-        plt.title(f"Joint Log Trace using {evaluator}")
-        plt.xlabel("Iteration")
-        plt.savefig(f"plots/{program_name}_jlt_{evaluator}.png")
-        plt.clf()
-
-    if evaluator == "MHGibbs" or evaluator == "HMC":
-        plt.title(f"Sample Trace for {program_name}")
-        plt.xlabel("Iteration")
-        if samples.ndim == 1:
-            plt.plot(samples, label=labels[0])
-        elif samples.ndim == 2:
-            for (i, label) in enumerate(labels):
-                plt.plot(samples[:, i], label=labels[i])
-        plt.savefig(f"plots/{program_name}_sample_trace_{evaluator}.png")
-        plt.clf()
-
-    # We can currently only handle a single boolean return value
-    if args["bool_res?"]:
-        # samples = generate_boolean_samples(samples, weights)
-        prob = np.average(np.array([float(s) for s in samples]), weights=np.exp(weights))
-        print(f"Posterior probability of {labels[0]}: {prob}", file=res_file)
-        plt.bar(["True", "False"], [prob, 1 - prob])
-        plt.title(f"Posterior probability of {labels[0]} using {evaluator}")
-        plt.savefig(f"plots/{program_name}_{labels[0]}_{evaluator}.png")
-        plt.clf()
-        return
-
-    # Handling numeric result values
     if samples.ndim == 1:
         average, variance = weighted_avg_and_var(samples, np.exp(weights))
         print(f"{labels[0]} mean: {average}", file=res_file)
@@ -93,7 +60,6 @@ def generate_samples(args):
     if evaluator == "HOPPLSampler":
         hoppl_sampler = hoppl_eval.HOPPLSampler(args)
         samples = hoppl_sampler.run()
-        pass
 
     else:
         print(f"ERROR: {evaluator} processing not implemented")
@@ -105,7 +71,7 @@ def generate_samples(args):
 
 
 def main():
-    max_time = 1800
+    max_time = 60
     labels = {
         1: ["geometric"],
         2: ["mu"],
