@@ -9,7 +9,6 @@ from tests import is_tol, run_prob_test, load_truth
 
 # these are adapted from Peter Norvig's Lispy
 class Env:
-    "An environment: a dict of {'var': val} pairs, with an outer Env."
 
     def __init__(self, parms=(), args=(), outer=None):
         self.data = pmap(zip(parms, args))
@@ -71,18 +70,21 @@ def evaluate(exp, env=None):
         if op == 'sample':
             alpha = evaluate(args[0], env=env)
             d = evaluate(args[1], env=env)
-            s = d.sample()
+            # s = d.sample()
             k = evaluate(args[2], env=env)
-            sigma = {'type': 'sample'
-                     # TODO: put any other stuff you need here
-                     }
-            return k, [s], sigma
+            sigma = {
+                'type': 'sample',
+                'distribution': d,
+                # TODO: put any other stuff you need here
+            }
+            return k, [], sigma
         elif op == 'observe':
             alpha = evaluate(args[0], env=env)
             d = evaluate(args[1], env=env)
             c = evaluate(args[2], env=env)
             k = evaluate(args[3], env=env)
-            sigma = {'type': 'observe'
+            sigma = {'type': 'observe',
+                     'distribution': d,
                      # TODO: put any other stuff you need here
                      }
             return k, [c], sigma
