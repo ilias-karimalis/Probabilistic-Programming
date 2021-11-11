@@ -1,16 +1,9 @@
-import time
 from evaluator import evaluate
 import torch
 import numpy as np
 import json
 import threading
-import os
 from queue import Queue
-
-
-def new_id():
-    return time.time()
-
 
 def get_IS_sample(ast):
     # init calc:
@@ -66,18 +59,16 @@ def send(message_queue, args):
     message_type = args["type"]
 
     if message_type == "start":
-        evaluation_thread = threading.Thread(
+        threading.Thread(
             target=threaded_evaluate,
             args=(message_queue, args["ast"])
-        )
-        evaluation_thread.start()
+        ).start()
     elif message_type == "continue":
-        evaluation_thread = threading.Thread(
+        threading.Thread(
             target=threaded_evaluate,
             args=(message_queue, None),
             kwargs={'continuation_pair': (args["continuation"], args["continuation_arguments"])}
-        )
-        evaluation_thread.start()
+        ).start()
     elif message_type == "sample":
         message_queue.put(args)
     elif message_type == "observe":
@@ -97,25 +88,16 @@ def threaded_evaluate(message_queue, ast, env=None, continuation_pair=None):
         res = evaluate(ast, env)('addr_start', lambda x: x)
 
     if type(res) is not tuple:
-        message = {
-            "type": "return",
-            "return_value": res,
-            # TODO We need to somehow keep track of logW.
-            # This may involve a structural change to the evaluator
-            # Or perhaps a way for us to keep track of which particle number
-            # we are currently dealing with.
-            # Undecided as of now but, leaning heavily on the second cause
-            # I'd rather not change the evaluator.
-        }
-        send(message_queue, message)
+        handle_result(message_queue, res)
         return
 
     continuation, continuation_arguments, sigma = res
-    # We now deal with the proc type which is kind of dumb
-    # TODO: I don't like
-    while sigma["type"] not in ["sample", "observe"]:
-        assert (sigma["type"], "proc")
-        continuation, continuation_arguments, sigma = continuation(*continuation_arguments)
+    while sigma["type"] in "proc":
+        res = continuation(*continuation_arguments)
+        if type(res) is not tuple:
+            handle_result(message_queue, res)
+            return
+        continuation, continuation_arguments, sigma = res
 
     message = {"type": sigma["type"]}
     if sigma["type"] == "sample":
@@ -133,10 +115,27 @@ def threaded_evaluate(message_queue, ast, env=None, continuation_pair=None):
     send(message_queue, message)
 
 
+def handle_result(message_queue, result):
+    message = {
+        "type": "return",
+        "return_value": result,
+        #
+        # TODO:
+        #   We need to somehow keep track of logW.
+        #   This may involve a structural change to the evaluator
+        #   Or perhaps a way for us to keep track of which particle number
+        #   we are currently dealing with.
+        #   Undecided as of now but, leaning heavily on the second cause
+        #   I'd rather not change the evaluator.
+        #
+    }
+    send(message_queue, message)
+
+
 if __name__ == '__main__':
 
     for i in range(1, 5):
-        ast = daphne()
+        ast = None  # TODO add Daphne call here...
         with open('programs/{}.json'.format(i), 'r') as f:
             exp = json.load(f)
         print('\n\n\nSample of prior of program {}:'.format(i))
