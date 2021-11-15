@@ -1,0 +1,3 @@
+Evidence estimate: -44.35667037963867
+Posterior Expectation: 1.4670588235294117
+Posterior Variance: 0.583032525951557

@@ -1,17 +1,88 @@
-from evaluator import evaluate
+import sys
 import torch
 import numpy as np
-import json
-import threading
 from queue import Queue
+from daphne import daphne
+from evaluator import evaluate
+from threading import Thread
 
-def get_IS_sample(ast):
-    # init calc:
-    # output = lambda x: x
-    # res = evaluate(exp, env=None)('addr_start', output)
-    # # TODO : hint, "get_sample_from_prior" as a basis for your solution
 
-    particle_count = 100  # Temporary
+def send(message_queue, args):
+    message_type = args["type"]
+    logW = args["info"]
+
+    if message_type == "start":
+        p = Thread(
+            target=threaded_evaluate,
+            args=(message_queue, args["ast"], logW)
+        )
+        p.start()
+    elif message_type == "continue":
+        p = Thread(
+            target=threaded_evaluate,
+            args=(message_queue, None, logW),
+            kwargs={'continuation_pair': (args["continuation"], args["continuation_arguments"])}
+        )
+        p.start()
+    elif message_type == "sample":
+        # print(f"putting sample message on queue")
+        message_queue.put(args)
+    elif message_type == "observe":
+        # print(f"putting observe message on queue")
+        message_queue.put(args)
+    elif message_type == "return":
+        # print(f"putting return message on queue")
+        message_queue.put(args)
+    else:
+        print(f"Message type {message_type} not implemented")
+
+
+# Evaluates an Expression
+def threaded_evaluate(message_queue, ast, info, env=None, continuation_pair=None):
+    if continuation_pair is not None:
+        continuation, continuation_arguments = continuation_pair
+        res = continuation(*continuation_arguments)
+    else:
+        res = evaluate(ast, env)('address_start', lambda x: x)
+
+    if type(res) is not tuple:
+        message = {
+            "type": "return", "return_value": res, "info": info,
+        }
+        send(message_queue, message)
+        return
+
+    continuation, continuation_arguments, sigma = res
+    while sigma["type"] is "proc":
+        res = continuation(*continuation_arguments)
+        if type(res) is not tuple:
+            message = {
+                "type": "return", "return_value": res, "info": info,
+            }
+            send(message_queue, message)
+            return
+        continuation, continuation_arguments, sigma = res
+
+    message = {"type": sigma["type"], "alpha": sigma["alpha"]}
+    if sigma["type"] == "sample":
+        message.update({
+            "continuation": continuation,
+            "distribution": sigma["distribution"],
+            "info": info,
+        })
+    elif sigma["type"] == "observe":
+        message.update({
+            "continuation": continuation,
+            "distribution": sigma["distribution"],
+            "observation": continuation_arguments[0],
+            "info": info,
+        })
+
+    send(message_queue, message)
+    return
+
+
+def IS_Sampling(ast, particle_count):
     results = []
     log_weights = []
     message_queue = Queue()
@@ -20,6 +91,7 @@ def get_IS_sample(ast):
             "type": "start",
             "ast": ast,
             "message_queue": message_queue,
+            "info": torch.tensor(0.)
         }
         send(message_queue, args)
 
@@ -32,8 +104,8 @@ def get_IS_sample(ast):
             args = {
                 "type": "continue",
                 "continuation": message["continuation"],
-                "continuation_arguments": [distribution.sample()],  # TODO: Seems wrong...
-                "logW": message["logW"],
+                "continuation_arguments": [distribution.sample()],
+                "info": message["info"],
             }
             send(message_queue, args)
         elif message_type == "observe":
@@ -43,117 +115,35 @@ def get_IS_sample(ast):
                 "type": "continue",
                 "continuation": message["continuation"],
                 "continuation_arguments": [observation],
-                "logW": message["logW"] + distribution.log_prob(observation),
+                "info": message["info"] + distribution.log_prob(observation),
             }
             send(message_queue, args)
         elif message_type == "return":
-            results.append(message["result"])
-            log_weights.append(message["logW"])
+            results.append(message["return_value"])
+            log_weights.append(message["info"])
             processed_particles += 1
+            # print(f"Particles remaining: {particle_count - processed_particles}")
         else:
             print("THIS MESSAGE CASE IS UNIMPLEMENTED!!")
     return log_weights, results
 
 
-def send(message_queue, args):
-    message_type = args["type"]
-
-    if message_type == "start":
-        threading.Thread(
-            target=threaded_evaluate,
-            args=(message_queue, args["ast"])
-        ).start()
-    elif message_type == "continue":
-        threading.Thread(
-            target=threaded_evaluate,
-            args=(message_queue, None),
-            kwargs={'continuation_pair': (args["continuation"], args["continuation_arguments"])}
-        ).start()
-    elif message_type == "sample":
-        message_queue.put(args)
-    elif message_type == "observe":
-        message_queue.put(args)
-    elif message_type == "return":
-        message_queue.put(args)
-    else:
-        print(f"Message type {message_type} not implemented")
-
-
-# Evaluates an Expression
-def threaded_evaluate(message_queue, ast, env=None, continuation_pair=None):
-    if continuation_pair is not None:
-        continuation, continuation_arguments = continuation_pair
-        res = continuation(*continuation_arguments)
-    else:
-        res = evaluate(ast, env)('addr_start', lambda x: x)
-
-    if type(res) is not tuple:
-        handle_result(message_queue, res)
-        return
-
-    continuation, continuation_arguments, sigma = res
-    while sigma["type"] in "proc":
-        res = continuation(*continuation_arguments)
-        if type(res) is not tuple:
-            handle_result(message_queue, res)
-            return
-        continuation, continuation_arguments, sigma = res
-
-    message = {"type": sigma["type"]}
-    if sigma["type"] == "sample":
-        message.update({
-            "continuation": continuation,
-            "distribution": sigma["distribution"],
-        })
-    elif sigma["type"] == "observe":
-        message.update({
-            "continuation": continuation,
-            "distribution": sigma["distribution"],
-            "observation": continuation_arguments[0],
-        })
-
-    send(message_queue, message)
-
-
-def handle_result(message_queue, result):
-    message = {
-        "type": "return",
-        "return_value": result,
-        #
-        # TODO:
-        #   We need to somehow keep track of logW.
-        #   This may involve a structural change to the evaluator
-        #   Or perhaps a way for us to keep track of which particle number
-        #   we are currently dealing with.
-        #   Undecided as of now but, leaning heavily on the second cause
-        #   I'd rather not change the evaluator.
-        #
-    }
-    send(message_queue, message)
-
-
 if __name__ == '__main__':
-
+    sys.setrecursionlimit(100000)
     for i in range(1, 5):
-        ast = None  # TODO add Daphne call here...
-        with open('programs/{}.json'.format(i), 'r') as f:
-            exp = json.load(f)
-        print('\n\n\nSample of prior of program {}:'.format(i))
-        log_weights = []
-        values = []
-        for i in range(10000):
-            logW, sample = get_IS_sample(exp)
-            log_weights.append(logW)
-
-        log_weights = torch.tensor(log_weights)
-
-        values = torch.stack(values)
-        values = values.reshape((values.shape[0], values.size().numel() // values.shape[0]))
-        log_Z = torch.logsumexp(log_weights, 0) - torch.log(torch.tensor(log_weights.shape[0], dtype=float))
-
-        log_norm_weights = log_weights - log_Z
-        weights = torch.exp(log_norm_weights).detach().numpy()
-        weighted_samples = (torch.exp(log_norm_weights).reshape((-1, 1)) * values.float()).detach().numpy()
-
-        print('covariance: ', np.cov(values.float().detach().numpy(), rowvar=False, aweights=weights))
-        print('posterior mean:', weighted_samples.mean(axis=0))
+        print(f"Running Daphne for Program {i}")
+        exp = daphne(['desugar-hoppl-cps', '-i', '../hw6/programs/{}.daphne'.format(i)])
+        # print(f"Sampling for Program {i}")
+        for pc in [1, 10, 100, 1000, 10000, 100000]:
+            print(f"Sampling for Program {i} with Particle Count {pc}")
+            log_weights, samples = IS_Sampling(exp, pc)
+            # Processing
+            samples = torch.stack(samples)
+            samples = samples.reshape((samples.shape[0], samples.size().numel() // samples.shape[0]))
+            log_weights = torch.tensor(log_weights)
+            log_Z = torch.logsumexp(log_weights, 0) - torch.log(torch.tensor(log_weights.shape[0], dtype=float))
+            log_norm_weights = log_weights - log_Z
+            weights = torch.exp(log_norm_weights).detach().numpy()
+            weighted_samples = (torch.exp(log_norm_weights).reshape((-1, 1)) * samples.float()).detach().numpy()
+            print('covariance: ', np.cov(samples.float().detach().numpy(), rowvar=False, aweights=weights))
+            print('posterior mean:', weighted_samples.mean(axis=0))
