@@ -85,7 +85,6 @@ class BBVISampler:
             if self.use_wandb:
                 wandb.log({
                     'ELBO': elbo,
-                    'sample expectation': np.mean(np.array(samples))
                 })
         if self.use_wandb:
             wandb.finish()
