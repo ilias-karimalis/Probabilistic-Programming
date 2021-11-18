@@ -1,0 +1,52 @@
+Evidence estimate: -58.15303372328635
+Label: data_point_0
+Posterior Expectation: 1.0
+Posterior Variance: 0.0
+Label: data_point_1
+Posterior Expectation: 2.0
+Posterior Variance: 0.0
+Label: data_point_2
+Posterior Expectation: 2.0
+Posterior Variance: 0.0
+Label: data_point_3
+Posterior Expectation: 2.0
+Posterior Variance: 0.0
+Label: data_point_4
+Posterior Expectation: 0.0
+Posterior Variance: 0.0
+Label: data_point_5
+Posterior Expectation: 2.0
+Posterior Variance: 0.0
+Label: data_point_6
+Posterior Expectation: 2.0
+Posterior Variance: 0.0
+Label: data_point_7
+Posterior Expectation: 0.0
+Posterior Variance: 0.0
+Label: data_point_8
+Posterior Expectation: 2.0
+Posterior Variance: 0.0
+Label: data_point_9
+Posterior Expectation: 2.0
+Posterior Variance: 0.0
+Label: data_point_10
+Posterior Expectation: 2.0
+Posterior Variance: 0.0
+Label: data_point_11
+Posterior Expectation: 2.0
+Posterior Variance: 0.0
+Label: data_point_12
+Posterior Expectation: 1.0
+Posterior Variance: 0.0
+Label: data_point_13
+Posterior Expectation: 1.0
+Posterior Variance: 0.0
+Label: data_point_14
+Posterior Expectation: 2.0
+Posterior Variance: 0.0
+Label: data_point_15
+Posterior Expectation: 2.0
+Posterior Variance: 0.0
+Label: data_point_16
+Posterior Expectation: 0.0
+Posterior Variance: 0.0

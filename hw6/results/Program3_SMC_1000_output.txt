@@ -1,3 +1,52 @@
-Evidence estimate: -44.602541591873965
-Posterior Expectation: 1.4501764705882354
-Posterior Variance: 0.5990470276816607
+Evidence estimate: -44.36601828342844
+Label: data_point_0
+Posterior Expectation: 1.412
+Posterior Variance: 0.7742559999999998
+Label: data_point_1
+Posterior Expectation: 1.551
+Posterior Variance: 0.657399
+Label: data_point_2
+Posterior Expectation: 1.717
+Posterior Variance: 0.292911
+Label: data_point_3
+Posterior Expectation: 1.687
+Posterior Variance: 0.39103099999999996
+Label: data_point_4
+Posterior Expectation: 1.02
+Posterior Variance: 0.019599999999999996
+Label: data_point_5
+Posterior Expectation: 1.485
+Posterior Variance: 0.581775
+Label: data_point_6
+Posterior Expectation: 1.785
+Posterior Variance: 0.21277499999999996
+Label: data_point_7
+Posterior Expectation: 1.68
+Posterior Variance: 0.38160000000000005
+Label: data_point_8
+Posterior Expectation: 1.631
+Posterior Variance: 0.388839
+Label: data_point_9
+Posterior Expectation: 1.147
+Posterior Variance: 0.9673909999999999
+Label: data_point_10
+Posterior Expectation: 0.342
+Posterior Variance: 0.567036
+Label: data_point_11
+Posterior Expectation: 1.747
+Posterior Variance: 0.304991
+Label: data_point_12
+Posterior Expectation: 1.692
+Posterior Variance: 0.36713599999999996
+Label: data_point_13
+Posterior Expectation: 1.686
+Posterior Variance: 0.291404
+Label: data_point_14
+Posterior Expectation: 1.65
+Posterior Variance: 0.3195
+Label: data_point_15
+Posterior Expectation: 1.49
+Posterior Variance: 0.3379
+Label: data_point_16
+Posterior Expectation: 1.065
+Posterior Variance: 0.702775
