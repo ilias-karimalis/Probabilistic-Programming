@@ -107,14 +107,16 @@ def run_until_observe_or_end(res):
     res = (res, None, {'done': True})  # wrap it back up in a tuple, that has "done" in the sigma map
     return res
 
-
 def resample_particles(particles, log_weights):
     particle_count = len(particles)
-    unormalized_weights = torch.exp(torch.stack(log_weights))
-    normalized_weights = np.array([s.detach().numpy() for s in softmax(torch.stack(log_weights))])
-    new_particle_indexes = np.random.choice(range(particle_count), particle_count, p=normalized_weights)
+    weights = np.exp(np.array([lw.detach() for lw in log_weights]))
+
+    #unormalized_weights = torch.exp(torch.stack(log_weights))
+    #normalized_weights = np.array([s.detach().numpy() for s in softmax(torch.stack(log_weights))])
+    new_particle_indexes = np.random.choice(range(particle_count), particle_count, p=weights/np.sum(weights))
     new_particles = [particles[index] for index in new_particle_indexes]
-    logZ = torch.log(torch.sum(unormalized_weights)/particle_count)
+    #logZ = torch.log(torch.sum(unormalized_weights)/particle_count)
+    logZ = np.log(np.sum(weights)/particle_count) 
     return logZ, new_particles
 
 
@@ -136,7 +138,7 @@ def SMC(n_particles, exp, program_name):
     smc_cnter = 0
     alpha_cur = "DEFAULT_VALUE"
     while not done:
-        print('In SMC step {}, Zs: '.format(smc_cnter), logZs)
+        print('In SMC step {}, Zs '.format(smc_cnter), sum(logZs))
         for i in range(n_particles):  # Even though this can be parallelized, we run it serially
             res = run_until_observe_or_end(particles[i])
 
@@ -162,11 +164,6 @@ def SMC(n_particles, exp, program_name):
             # resample and keep track of logZs
             logZn, particles = resample_particles(particles, weights)
             logZs.append(logZn)
-            torch.save(
-                (particles, logZs),
-                f"partial_results/{program_name}_SMC_{n_particles}_itter_{smc_cnter}",
-                pickle_module=dill
-            )
 
         smc_cnter += 1
     logZ = sum(logZs)
@@ -195,11 +192,9 @@ if __name__ == '__main__':
         3: [f"data_point_{i}" for i in range(17)],
         4: ["mu"]
     }
-    for i in range(4, 5):
+    for i in range(3, 4):
         exp = daphne(['desugar-hoppl-cps', '-i', '../hw6/programs/{}.daphne'.format(i)])
-        for pc in [1, 10, 100, 1000, 10000, 100000]:
-            if i == 3 and pc in [1, 10, 100, 1000, 10000]:
-                continue
+        for pc in [100000]: #[10, 100, 1000, 10000, 100000]:
             res_file = open(f"results/Program{i}_SMC_{pc}_output.txt", "w")
             print(f"Sampling for Program {i} with Particle Count {pc}")
             start = time.time()
@@ -210,5 +205,3 @@ if __name__ == '__main__':
             print(f"Posterior Expectation: {np.average(particles)}", file=res_file)
             print(f"Posterior Variance: {np.var(particles)}", file=res_file)
             plot(particles, labels[i], pc, f"Program{i}")
-
-
