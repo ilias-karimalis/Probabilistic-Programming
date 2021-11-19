@@ -27,13 +27,9 @@ def run_until_observe_or_end(res):
 def resample_particles(particles, log_weights):
     particle_count = len(particles)
     weights = np.exp(np.array([lw.detach() for lw in log_weights]))
-
-    #unormalized_weights = torch.exp(torch.stack(log_weights))
-    #normalized_weights = np.array([s.detach().numpy() for s in softmax(torch.stack(log_weights))])
     new_particle_indexes = np.random.choice(range(particle_count), particle_count, p=weights/np.sum(weights))
     new_particles = [particles[index] for index in new_particle_indexes]
-    #logZ = torch.log(torch.sum(unormalized_weights)/particle_count)
-    logZ = np.log(np.sum(weights)/particle_count) 
+    logZ = np.log(np.sum(weights)/particle_count)
     return logZ, new_particles
 
 
