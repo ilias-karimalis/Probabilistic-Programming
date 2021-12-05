@@ -2,6 +2,3 @@
 	path = daphne
 	url = https://github.com/plai-group/daphne.git
 
-[submodule "PoolRLAI"]
-	path = PoolRLAI
-	url = https://github.com/ilias-karimalis/PoolRLAI.git
